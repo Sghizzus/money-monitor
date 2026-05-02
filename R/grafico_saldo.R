@@ -16,8 +16,9 @@
 
 grafico_saldo <- function(con) {
   tbl(con, "movimenti") |>
-    collect() |>
+    select(data, disponibile) |>
     arrange(data) |>
+    collect() |>
     group_by(data) |>
     summarise(disponibile = last(disponibile)) |>
     ggplot(aes(data, disponibile)) +
