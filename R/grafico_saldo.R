@@ -25,6 +25,5 @@ grafico_saldo <- function(con) {
     geom_point() +
     scale_y_continuous(labels = scales::label_currency(prefix = "€")) +
     geom_smooth() +
-    labs(x = "Data", y = "Saldo disponibile") +
-    theme_minimal()
+    labs(x = "Data", y = "Saldo disponibile")
 }
