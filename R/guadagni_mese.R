@@ -1,4 +1,4 @@
-#' Calcola i guadagni degli ultimi 30 giorni
+#' Calcola i guadagni del mese corrente
 #'
 #' Somma tutti i movimenti con importo positivo (entrate) registrati nel mese corrente.
 #'
@@ -7,7 +7,7 @@
 #' @return Un valore numerico che rappresenta la somma delle entrate del mese corrente.
 #'
 #' @examples
-#' \dontrun
+#' \dontrun{
 #' con <- db_connect()
 #' guadagni_del_mese(con)
 #' }
@@ -17,6 +17,7 @@ guadagni_del_mese <- function(con) {
   tbl(con, "movimenti") |>
     filter(
       importo > 0,
+      year(data) == year(today()),
       month(data) == month(today())
     ) |>
     summarise(guadagni_del_mese = sum(importo, na.rm = TRUE)) |>
