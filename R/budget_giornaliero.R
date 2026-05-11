@@ -11,6 +11,8 @@
 #' @param perc Percentuale da sottrarre ai guadagni prima del calcolo
 #'   (valore tra 0 e 1). Viene passata direttamente a [budget_mensile()].
 #'   Ad esempio, `1/9` riserva circa l'11% per il risparmio.
+#' @param includi_ignorati Se `TRUE`, include anche i record marcati come ignorati.
+#'   Default `FALSE`.
 #'
 #' @return Un valore numerico non negativo che rappresenta il budget
 #'   giornaliero consigliato per la data odierna (in unità monetarie).
@@ -34,8 +36,8 @@
 #' @seealso [budget_mensile()], [guadagni_del_mese()]
 #'
 #' @export
-budget_giornaliero <- function(con, perc) {
-  budget <- budget_mensile(con, perc)
+budget_giornaliero <- function(con, perc, includi_ignorati = FALSE) {
+  budget <- budget_mensile(con, perc, includi_ignorati)
 
   giorni_nel_mese <- days_in_month(today())
 
@@ -43,7 +45,8 @@ budget_giornaliero <- function(con, perc) {
     filter(
       month(data_valuta) == month(today()),
       data_valuta < today(),
-      importo < 0
+      importo < 0,
+      includi_ignorati | !ignora
     ) |>
     mutate(
       giorno = day(data_valuta)

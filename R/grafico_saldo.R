@@ -4,6 +4,8 @@
 #' nel tempo, con una linea di tendenza smoothed.
 #'
 #' @param con Connessione al database (oggetto DBI connection).
+#' @param includi_ignorati Se `TRUE`, include anche i record marcati come ignorati.
+#'   Default `FALSE`.
 #'
 #' @return Un oggetto ggplot che mostra l'andamento del saldo disponibile
 #'   per data, con etichette in euro.
@@ -14,14 +16,15 @@
 #' grafico_saldo(con)
 #' }
 
-grafico_saldo <- function(con) {
+grafico_saldo <- function(con, includi_ignorati = TRUE) {
   tbl(con, "movimenti") |>
-    select(data, disponibile) |>
-    arrange(data) |>
+    filter(includi_ignorati | !ignora) |>
+    select(data_valuta, disponibile) |>
+    arrange(data_valuta) |>
     collect() |>
-    group_by(data) |>
+    group_by(data_valuta) |>
     summarise(disponibile = last(disponibile)) |>
-    ggplot(aes(data, disponibile)) +
+    ggplot(aes(data_valuta, disponibile)) +
     geom_line() +
     geom_point() +
     scale_y_continuous(labels = scales::label_currency(prefix = "€")) +

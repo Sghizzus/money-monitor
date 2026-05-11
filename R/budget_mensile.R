@@ -6,6 +6,8 @@
 #' @param con Connessione al database (oggetto DBI connection).
 #' @param perc Percentuale da sottrarre ai guadagni (valore tra 0 e 1).
 #'   Ad esempio, `1/9` sottrae circa l'11% per il risparmio.
+#' @param includi_ignorati Se `TRUE`, include anche i record marcati come ignorati.
+#'   Default `FALSE`.
 #'
 #' @return Un valore numerico che rappresenta il budget disponibile
 #'   dopo aver sottratto la percentuale specificata.
@@ -17,6 +19,6 @@
 #' }
 #'
 #' @export
-budget_mensile <- function(con, perc) {
-  guadagni_del_mese(con) * (1 - perc)
+budget_mensile <- function(con, perc, includi_ignorati = FALSE) {
+  guadagni_del_mese(con, includi_ignorati) * (1 - perc)
 }

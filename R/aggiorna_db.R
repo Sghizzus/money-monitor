@@ -16,7 +16,7 @@ library(log4r)
 #'   \item Importa e pulisce i dati (conversione date, rinomina colonne)
 #'   \item Si connette al database tramite [db_connect()]
 #'   \item Confronta i dati con quelli esistenti per evitare duplicati
-#'   \item Inserisce solo i nuovi record
+#'   \item Inserisce solo i nuovi record con `ignora = FALSE`
 #'   \item Rimuove il file Excel dopo l'importazione
 #' }
 #'
@@ -67,7 +67,8 @@ aggiorna_db <- function(log = logger()) {
   dati_attuali <- tbl(con, "movimenti") |> collect()
 
   dati_da_aggiungere <- data |>
-    anti_join(dati_attuali, join_by(data, disponibile))
+    anti_join(dati_attuali, join_by(data, disponibile)) |>
+    mutate(ignora = FALSE)
 
   info(log, str_glue("{nrow(dati_da_aggiungere)} nuovi record da inserire"))
 
