@@ -4210,28 +4210,28 @@
       "checksum": "fe1de6ab816519e429008ac1f851dd62"
     },
     ".Rprofile": {
-      "checksum": "61751f7ff1e3beca3fd5c2bf6eba7dd3"
+      "checksum": "d113239e480e1d451e45875429996a59"
     },
     "app.R": {
-      "checksum": "a9227dca8853e5d0e717c031e3b52965"
+      "checksum": "9745cee33b1d86e69f9117cc22f1b8e5"
     },
     "R/aggiorna_db.R": {
-      "checksum": "f41e0a16a64473c060c98ace875dc2b0"
+      "checksum": "12989279651d01031cb1cfd5a97080cd"
     },
     "R/budget_giornaliero.R": {
-      "checksum": "841d8d2a1c742371f223b8a7ea2a074e"
+      "checksum": "27dc495c15b98f0ae6624a017198cdf6"
     },
     "R/budget_mensile.R": {
-      "checksum": "fe296caeecaf5f0211db2b0160b38d7b"
+      "checksum": "c984d7ab6275adbdcd38a1a84dcb40b5"
     },
     "R/db_connect.R": {
       "checksum": "eda826865f16fd483acee7437c1b965e"
     },
     "R/grafico_saldo.R": {
-      "checksum": "6c3ae9ecc8f60a43d685816917e852a7"
+      "checksum": "fd0794efd95640008bc1b708b58173d1"
     },
     "R/guadagni_mese.R": {
-      "checksum": "7ece4f2207d53f81bb63853abe30fb92"
+      "checksum": "cf8b2e9eff7c5d681b2f80b7e75b60de"
     },
     "README.md": {
       "checksum": "d370f173f73371ee9b468da4cfc151ed"
