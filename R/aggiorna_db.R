@@ -2,7 +2,7 @@ library(tidyverse)
 library(readxl)
 library(janitor)
 library(lubridate)
-library(log4r)
+library(logger)
 
 #' Aggiorna il database con i nuovi movimenti bancari
 #'
@@ -34,20 +34,20 @@ library(log4r)
 #'
 #' @seealso [db_connect()] per la connessione al database
 
-aggiorna_db <- function(log = logger()) {
+aggiorna_db <- function() {
   file <- list.files(pattern = "\\.xlsx$")
 
   if (length(file) == 0) {
-    warn(log, "Nessun file .xlsx trovato nella directory corrente")
+    log_warn("Nessun file .xlsx trovato nella directory corrente")
     return(invisible(FALSE))
   }
 
   if (length(file) > 1) {
-    warn(log, str_glue("Trovati {length(file)} file. Uso il primo: {file[1]}"))
+    log_warn("Trovati {length(file)} file. Uso il primo: {file[1]}")
     file <- file[1]
   }
 
-  info(log, str_glue("Individuato file {file}"))
+  log_info("Individuato file {file}")
 
   data <- read_excel(file, skip = 3) |>
     clean_names() |>
@@ -57,12 +57,12 @@ aggiorna_db <- function(log = logger()) {
       valuta_saldo = valuta_8
     )
 
-  info(log, "Caricato file in memoria. Tento la connessione al db.")
+  log_info("Caricato file in memoria. Tento la connessione al db.")
 
   con <- db_connect()
   on.exit(dbDisconnect(con), add = TRUE) # garantisce disconnessione
 
-  info(log, "Connessione avvenuta con successo")
+  log_info("Connessione avvenuta con successo")
 
   dati_attuali <- tbl(con, "movimenti") |> collect()
 
@@ -70,15 +70,15 @@ aggiorna_db <- function(log = logger()) {
     anti_join(dati_attuali, join_by(data, disponibile)) |>
     mutate(ignora = FALSE)
 
-  info(log, str_glue("{nrow(dati_da_aggiungere)} nuovi record da inserire"))
+  log_info("{nrow(dati_da_aggiungere)} nuovi record da inserire")
 
   if (nrow(dati_da_aggiungere) > 0) {
     dbAppendTable(con, "movimenti", dati_da_aggiungere)
-    info(log, "Caricati i nuovi dati nel db")
+    log_info("Caricati i nuovi dati nel db")
   }
 
   file.remove(file)
-  info(log, "Rimosso il file di importazione. Task terminato")
+  log_info("Rimosso il file di importazione. Task terminato")
 
   invisible(TRUE)
 }
