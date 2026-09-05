@@ -10,6 +10,8 @@ library(logger)
 #' corrente, identifica i nuovi record non ancora presenti nel database
 #' e li inserisce nella tabella `movimenti`.
 #'
+#' @param con connessione al db
+#'
 #' @details La funzione:
 #' \enumerate{
 #'   \item Cerca un file `.xlsx` nella directory corrente
@@ -34,7 +36,7 @@ library(logger)
 #'
 #' @seealso [db_connect()] per la connessione al database
 
-aggiorna_db <- function() {
+aggiorna_db <- function(con) {
   file <- list.files(pattern = "\\.xlsx$")
 
   if (length(file) == 0) {
@@ -58,9 +60,6 @@ aggiorna_db <- function() {
     )
 
   log_info("Caricato file in memoria. Tento la connessione al db.")
-
-  con <- db_connect()
-  on.exit(dbDisconnect(con), add = TRUE) # garantisce disconnessione
 
   log_info("Connessione avvenuta con successo")
 
