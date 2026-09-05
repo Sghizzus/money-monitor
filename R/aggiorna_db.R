@@ -31,7 +31,9 @@ library(logger)
 #' \dontrun{
 #' # Posizionarsi nella directory contenente il file Excel
 #' setwd("path/to/download")
-#' aggiorna_db()
+#'
+#' con <- db_connect()
+#' aggiorna_db(con)
 #' }
 #'
 #' @seealso [db_connect()] per la connessione al database
