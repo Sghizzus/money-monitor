@@ -1,0 +1,12 @@
+.git
+.gitignore
+.Rhistory
+.RData
+.Ruserdata
+.Renviron
+.vscode
+*.xlsx
+renv/library
+renv/staging
+manifest.json
+docs/
