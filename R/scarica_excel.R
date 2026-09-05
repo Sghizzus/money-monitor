@@ -51,6 +51,21 @@ source("R/otp_polling.R")
 #' }
 
 scarica_excel <- function(con) {
+  # Su Linux (es. Docker) Chrome richiede --no-sandbox perché il container
+  # non ha le capabilities kernel necessarie per la sandbox di Chrome.
+  # --disable-dev-shm-usage evita crash per /dev/shm troppo piccolo.
+  if (.Platform$OS.type != "windows") {
+    ch <- chromote::Chromote$new(
+      browser = chromote::Chrome$new(
+        args = c(
+          "--no-sandbox",
+          "--disable-dev-shm-usage"
+        )
+      )
+    )
+    chromote::set_default_chromote_object(ch)
+  }
+
   bbva <- read_html_live("https://www.bbva.it")
 
   # Esporta bbva nel global environment solo in caso di errore
