@@ -1,60 +1,48 @@
 #!/bin/bash
 # ==============================================================
-# Setup Azure Container Registry + Container App Job
-# Eseguire una volta sola per il deploy iniziale.
-# Richiede Azure CLI installata e autenticata (az login).
+# Setup Azure Container App Job
+# Usa GitHub Container Registry (GHCR) come image registry,
+# eliminando la dipendenza da Azure Container Registry.
+#
+# Prerequisiti:
+# - Azure CLI installata e autenticata (az login)
+# - L'immagine deve essere già stata buildata da GitHub Actions
+#   (push su main triggera il workflow docker-build.yml)
+# - Il package GHCR deve essere impostato come pubblico su GitHub:
+#   github.com/Sghizzus/money-monitor/pkgs/container/money-monitor
+#   -> Package settings -> Change visibility -> Public
 # ==============================================================
 
 set -e
 
-# --- Variabili (modifica secondo necessità) ---
+# --- Variabili ---
 RESOURCE_GROUP="money-monitor-rg"
-LOCATION="westeurope"
-ACR_NAME="moneymonitoracr"          # solo lettere e numeri, unico globalmente
-IMAGE_NAME="money-monitor"
-IMAGE_TAG="latest"
+LOCATION_RG="westeurope"      # region del resource group già esistente
+LOCATION="northeurope"        # region del Container App
 ENV_NAME="money-monitor-env"
 JOB_NAME="money-monitor-job"
+IMAGE="ghcr.io/sghizzus/money-monitor:latest"
 
 # Credenziali — non scrivere i valori qui: vengono letti dall'ambiente
 DB_PWD="${DB_PWD}"
 BBVA_USER="${BBVA_USER}"
 BBVA_PASSWORD="${BBVA_PASSWORD}"
 
-# --- 1. Resource Group ---
-echo ">>> Creo il resource group..."
+# --- 1. Resource Group (già esistente, idempotente) ---
+echo ">>> Resource group..."
 az group create \
   --name "$RESOURCE_GROUP" \
-  --location "$LOCATION"
+  --location "$LOCATION_RG"
 
-# --- 2. Azure Container Registry ---
-echo ">>> Creo il Container Registry..."
-az acr create \
-  --resource-group "$RESOURCE_GROUP" \
-  --name "$ACR_NAME" \
-  --sku Basic \
-  --admin-enabled true
-
-# --- 3. Build e push dell'immagine ---
-echo ">>> Build e push dell'immagine Docker..."
-az acr build \
-  --registry "$ACR_NAME" \
-  --image "$IMAGE_NAME:$IMAGE_TAG" \
-  .
-
-# --- 4. Container Apps Environment ---
+# --- 2. Container Apps Environment ---
 echo ">>> Creo il Container Apps Environment..."
 az containerapp env create \
   --name "$ENV_NAME" \
   --resource-group "$RESOURCE_GROUP" \
   --location "$LOCATION"
 
-# --- 5. Container App Job (cron ogni 15 minuti) ---
+# --- 3. Container App Job (cron ogni 15 minuti) ---
 echo ">>> Creo il Container App Job..."
-
-ACR_SERVER="${ACR_NAME}.azurecr.io"
-ACR_PASSWORD=$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv)
-
 az containerapp job create \
   --name "$JOB_NAME" \
   --resource-group "$RESOURCE_GROUP" \
@@ -62,10 +50,7 @@ az containerapp job create \
   --trigger-type "Schedule" \
   --cron-expression "*/15 * * * *" \
   --replica-timeout 1800 \
-  --image "${ACR_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}" \
-  --registry-server "$ACR_SERVER" \
-  --registry-username "$ACR_NAME" \
-  --registry-password "$ACR_PASSWORD" \
+  --image "$IMAGE" \
   --cpu 0.5 \
   --memory 1.0Gi \
   --secrets \
@@ -77,10 +62,10 @@ az containerapp job create \
       "BBVA_USER=secretref:bbva-user" \
       "BBVA_PASSWORD=secretref:bbva-password"
 
-echo ">>> Deploy completato."
-echo "    Job: $JOB_NAME"
-echo "    Immagine: ${ACR_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
 echo ""
-echo "Per aggiornare l'immagine dopo modifiche al codice:"
-echo "  az acr build --registry $ACR_NAME --image $IMAGE_NAME:$IMAGE_TAG ."
-echo "  az containerapp job update --name $JOB_NAME --resource-group $RESOURCE_GROUP --image ${ACR_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}"
+echo ">>> Deploy completato."
+echo "    Job:    $JOB_NAME"
+echo "    Image:  $IMAGE"
+echo ""
+echo "Per aggiornare dopo modifiche al codice: basta fare push su main."
+echo "GitHub Actions rebuilda l'immagine automaticamente."
