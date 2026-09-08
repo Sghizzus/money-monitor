@@ -1,4 +1,4 @@
-name: Build e push immagine Docker su GHCR
+name: Build e deploy su Azure Container Registry
 
 on:
   push:
@@ -10,26 +10,28 @@ on:
       - 'run.R'
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Login a GitHub Container Registry
-        uses: docker/login-action@v3
+      - name: Login ad Azure
+        uses: azure/login@v2
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Build e push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ghcr.io/sghizzus/money-monitor:latest
+      - name: Build e push su ACR
+        run: |
+          az acr build \
+            --registry moneymonitoracr \
+            --image money-monitor:latest \
+            .
+
+      - name: Aggiorna il Container App Job con la nuova immagine
+        run: |
+          az containerapp job update \
+            --name money-monitor-job \
+            --resource-group money-monitor-rg \
+            --image moneymonitoracr.azurecr.io/money-monitor:latest

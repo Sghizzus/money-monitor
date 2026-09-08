@@ -1,36 +1,39 @@
 FROM rocker/r-ver:4.6.1
 
-# Dipendenze di sistema:
+# Dipendenze di sistema in un unico layer:
+# - software-properties-common: per add-apt-repository (PPA Chromium)
+# - curl: richiesto da renv per i download dei pacchetti
 # - libpq-dev: per RPostgres
-# - chromium: browser headless per rvest/chromote
-# - ca-certificates, fonts: necessari per navigazione HTTPS e rendering
+# - libuv1: richiesto dal pacchetto R `fs`
+# - chromium (via PPA xtradeb): su Ubuntu il pacchetto ufficiale è solo snap,
+#   non compatibile con Docker; il PPA fornisce un .deb installabile
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    software-properties-common \
+    curl \
     libpq-dev \
-    chromium \
-    ca-certificates \
-    fonts-liberation \
+    libuv1 \
+    && add-apt-repository -y ppa:xtradeb/apps \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends chromium \
     && rm -rf /var/lib/apt/lists/*
 
 # Indica a chromote dove trovare Chrome
 ENV CHROMOTE_CHROME=/usr/bin/chromium
 
-# Crea la cartella Downloads (usata come destinazione temporanea del file Excel)
+# Crea la cartella Downloads (destinazione temporanea del file Excel)
 RUN mkdir -p /root/Downloads
 
-WORKDIR /app
+WORKDIR /project
+RUN mkdir -p renv
 
-# Installa renv — layer separato, non cambia spesso
-RUN R -e "install.packages('renv', repos = 'https://packagemanager.posit.co/cran/latest')"
-
-# Ripristina i pacchetti dal lockfile.
-# Copiando solo renv.lock + activate.R prima del resto del codice,
-# Docker riutilizza questo layer finché il lockfile non cambia.
+# Copia l'infrastruttura renv — layer cachato finché renv.lock non cambia
 COPY renv.lock renv.lock
+COPY .Rprofile .Rprofile
 COPY renv/activate.R renv/activate.R
 COPY renv/settings.json renv/settings.json
-RUN R -e "renv::restore()"
 
-# Copia il resto del progetto
+RUN R -s -e "renv::restore()"
+
 COPY . .
 
 CMD ["Rscript", "run.R"]
