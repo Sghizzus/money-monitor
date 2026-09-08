@@ -4,10 +4,11 @@ FROM rocker/r-ver:4.6.1
 # - libpq-dev: per RPostgres
 # - chromium: browser headless per rvest/chromote
 # - ca-certificates, fonts: necessari per navigazione HTTPS e rendering
-RUN apt-get install -y software-properties-common
-RUN add-apt-repository -y ppa:xtradeb/apps
-RUN apt-get update
-RUN apt install -y chromium libpq-dev
+RUN apt-get update && apt-get install -y software-properties-common \
+    && add-apt-repository -y ppa:xtradeb/apps \
+    && apt-get update \
+    && apt install -y chromium libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Indica a chromote dove trovare Chrome
 ENV CHROMOTE_CHROME=/usr/bin/chromium
