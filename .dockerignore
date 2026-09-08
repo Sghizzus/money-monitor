@@ -6,7 +6,8 @@
 .Renviron
 .vscode
 *.xlsx
-renv/library
-renv/staging
 manifest.json
 docs/
+renv/*
+!renv/activate.R
+!renv/settings.json
