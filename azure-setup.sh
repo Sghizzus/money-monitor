@@ -47,8 +47,7 @@ echo ">>> Creo il Container Apps Environment..."
 az containerapp env create \
   --name "$ENV_NAME" \
   --resource-group "$RESOURCE_GROUP" \
-  --location "$LOCATION" \
-  --logs-destination none
+  --location "$LOCATION"
 
 # --- 5. Container App Job (cron ogni 15 minuti) ---
 echo ">>> Creo il Container App Job..."
