@@ -29,9 +29,39 @@ jobs:
             --image money-monitor:latest \
             .
 
-      - name: Aggiorna il Container App Job con la nuova immagine
+      - name: Crea o aggiorna il Container App Job
         run: |
-          az containerapp job update \
-            --name money-monitor-job \
-            --resource-group money-monitor-rg \
-            --image moneymonitoracr.azurecr.io/money-monitor:latest
+          IMAGE="moneymonitoracr.azurecr.io/money-monitor:latest"
+          JOB="money-monitor-job"
+          RG="money-monitor-rg"
+          ENV="money-monitor-env"
+          ACR_PASSWORD=$(az acr credential show --name moneymonitoracr --query "passwords[0].value" -o tsv)
+
+          if az containerapp job show --name $JOB --resource-group $RG &>/dev/null; then
+            az containerapp job update \
+              --name $JOB \
+              --resource-group $RG \
+              --image $IMAGE
+          else
+            az containerapp job create \
+              --name $JOB \
+              --resource-group $RG \
+              --environment $ENV \
+              --trigger-type "Schedule" \
+              --cron-expression "*/15 * * * *" \
+              --replica-timeout 1800 \
+              --image $IMAGE \
+              --registry-server moneymonitoracr.azurecr.io \
+              --registry-username moneymonitoracr \
+              --registry-password "$ACR_PASSWORD" \
+              --cpu 0.5 \
+              --memory 1.0Gi \
+              --secrets \
+                  "db-pwd=${{ secrets.DB_PWD }}" \
+                  "bbva-user=${{ secrets.BBVA_USER }}" \
+                  "bbva-password=${{ secrets.BBVA_PASSWORD }}" \
+              --env-vars \
+                  "DB_PWD=secretref:db-pwd" \
+                  "BBVA_USER=secretref:bbva-user" \
+                  "BBVA_PASSWORD=secretref:bbva-password"
+          fi
