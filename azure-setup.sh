@@ -53,6 +53,7 @@ az containerapp env create \
 echo ">>> Creo il Container App Job..."
 
 ACR_SERVER="${ACR_NAME}.azurecr.io"
+az acr update -n "$ACR_NAME" --admin-enabled true
 ACR_PASSWORD=$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv)
 
 az containerapp job create \
@@ -62,6 +63,7 @@ az containerapp job create \
   --trigger-type "Schedule" \
   --cron-expression "*/15 * * * *" \
   --replica-timeout 1800 \
+  --replica-retry-limit 1 \
   --image "${ACR_SERVER}/${IMAGE_NAME}:${IMAGE_TAG}" \
   --registry-server "$ACR_SERVER" \
   --registry-username "$ACR_NAME" \
