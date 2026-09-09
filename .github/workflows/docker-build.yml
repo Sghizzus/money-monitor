@@ -27,6 +27,7 @@ jobs:
           az acr build \
             --registry moneymonitoracr \
             --image money-monitor:latest \
+            --cache-from moneymonitoracr.azurecr.io/money-monitor:latest \
             .
 
       - name: Aggiorna il Container App Job con la nuova immagine
