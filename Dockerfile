@@ -7,7 +7,7 @@ FROM rocker/r-ver:4.6.1
 RUN apt-get update && apt-get install -y software-properties-common \
     && add-apt-repository -y ppa:xtradeb/apps \
     && apt-get update \
-    && apt install -y chromium libpq-dev \
+    && apt install -y chromium libpq-dev libuv1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Indica a chromote dove trovare Chrome
