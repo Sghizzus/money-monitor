@@ -30,9 +30,5 @@ jobs:
             --cache-from moneymonitoracr.azurecr.io/money-monitor:latest \
             .
 
-      - name: Aggiorna il Container App Job con la nuova immagine
-        run: |
-          az containerapp job update \
-            --name money-monitor-job \
-            --resource-group money-monitor-rg \
-            --image moneymonitoracr.azurecr.io/money-monitor:latest
+      # az containerapp job update non necessario: il job usa il tag :latest
+      # e ripulla l'immagine automaticamente ad ogni esecuzione
