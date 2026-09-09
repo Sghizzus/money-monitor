@@ -59,7 +59,13 @@ scarica_excel <- function(con) {
       browser = chromote::Chrome$new(
         args = c(
           "--no-sandbox",
-          "--disable-dev-shm-usage"
+          "--disable-dev-shm-usage",
+          "--disable-gpu",
+          "--disable-software-rasterizer",
+          "--disable-extensions",
+          "--headless=new",
+          "--no-first-run",
+          "--remote-debugging-port=0"
         )
       )
     )
