@@ -7,7 +7,29 @@ FROM rocker/r-ver:4.6.1
 RUN apt-get update && apt-get install -y software-properties-common \
     && add-apt-repository -y ppa:xtradeb/apps \
     && apt-get update \
-    && apt install -y chromium libpq-dev libuv1 \
+    && apt-get install -y --no-install-recommends \
+        chromium \
+        # RPostgres
+        libpq-dev \
+        # fs
+        libuv1 \
+        # haven
+        zlib1g-dev \
+        # curl, httr, openssl
+        libssl-dev \
+        libcurl4-openssl-dev \
+        # xml2, rvest
+        libxml2-dev \
+        # systemfonts (ggplot2/tidyverse)
+        libfontconfig1-dev \
+        # textshaping (ggplot2/tidyverse)
+        libharfbuzz-dev \
+        libfribidi-dev \
+        # ragg (ggplot2)
+        libfreetype6-dev \
+        libpng-dev \
+        libtiff5-dev \
+        libjpeg-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Indica a chromote dove trovare Chrome
