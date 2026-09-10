@@ -63,9 +63,7 @@ scarica_excel <- function(con) {
           "--disable-gpu",
           "--disable-software-rasterizer",
           "--disable-extensions",
-          "--headless=new",
-          "--no-first-run",
-          "--remote-debugging-port=0"
+          "--no-first-run"
         )
       )
     )
