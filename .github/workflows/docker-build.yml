@@ -28,7 +28,6 @@ jobs:
           az acr build \
             --registry moneymonitoracr \
             --image money-monitor:latest \
-            --cache-from moneymonitoracr.azurecr.io/money-monitor:latest \
             .
 
       # az containerapp job update non necessario: il job usa il tag :latest
