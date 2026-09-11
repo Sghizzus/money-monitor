@@ -33,15 +33,13 @@ if (now < next_run) {
 
 log_info("Avvio aggiornamento...")
 
-# Diagnostica Chrome (rimovibile una volta verificato che funzioni)
+# Diagnostica Chrome e rete
 chrome_path <- Sys.getenv("CHROMOTE_CHROME", unset = "non impostato")
-log_info("CHROMOTE_CHROME: {chrome_path}")
-log_info("which chromium: {system('which chromium 2>&1', intern = TRUE)}")
-log_info(
-  "which chromium-browser: {system('which chromium-browser 2>&1', intern = TRUE)}"
-)
 log_info(
   "Chrome version: {system(paste(chrome_path, '--version --no-sandbox 2>&1'), intern = TRUE)}"
+)
+log_info(
+  "Network test bbva.it: {paste(system('curl -sI --max-time 10 https://www.bbva.it 2>&1 | head -3', intern = TRUE), collapse = ' ')}"
 )
 
 scarica_excel(con)

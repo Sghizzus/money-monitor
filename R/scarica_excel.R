@@ -67,6 +67,7 @@ scarica_excel <- function(con) {
         )
       )
     )
+    ch$default_timeout <- 30000 # 30 secondi invece di 10
     chromote::set_default_chromote_object(ch)
   }
 
