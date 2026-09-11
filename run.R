@@ -33,29 +33,24 @@ if (now < next_run) {
 
 log_info("Avvio aggiornamento...")
 
-# Diagnostica Chrome e rete
-chrome_path <- Sys.getenv("CHROMOTE_CHROME", unset = "non impostato")
-log_info(
-  "Chrome version: {system(paste(chrome_path, '--version --no-sandbox 2>&1'), intern = TRUE)}"
-)
-log_info(
-  "Network test bbva.it: {paste(system('curl -sI --max-time 10 https://www.bbva.it 2>&1 | head -3', intern = TRUE), collapse = ' ')}"
-)
-
-scarica_excel(con)
-aggiorna_db(con)
-
-# Aggiorno il prossimo orario: aggiungo ore casuali con distribuzione
-# esponenziale di parametro 1/sqrt(24) (media attesa: sqrt(24) ore)
+# Aggiorno next_run subito, prima di tentare lo scraping.
+# Così anche in caso di errore (es. banca che blocca il login)
+# il container non ritenta ogni 15 minuti ma rispetta il delay casuale.
 delay_hours <- rexp(1, rate = 1 / sqrt(24))
 new_next_run <- next_run + dhours(delay_hours)
-
 dbExecute(
   con,
   "UPDATE scheduler SET next_run = $1 WHERE id = 1",
   params = list(new_next_run)
 )
+log_info("Prossima esecuzione pianificata: {format(new_next_run)}")
 
-log_info("Completato. Prossima esecuzione: {format(new_next_run)}")
+tryCatch({
+  scarica_excel(con)
+  aggiorna_db(con)
+  log_info("Aggiornamento completato con successo.")
+}, error = function(e) {
+  log_error("Aggiornamento fallito: {conditionMessage(e)}")
+})
 
 dbDisconnect(con)
