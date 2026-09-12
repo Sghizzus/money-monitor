@@ -127,6 +127,21 @@ scarica_excel <- function(con) {
   )$result$value
   message("[INFO] URL dopo login: ", url_post_login)
 
+  if (grepl("signin", url_post_login, fixed = TRUE)) {
+    # Ancora sulla pagina di login: distingue blocco banca da problema tecnico
+    error_msg <- bbva$session$Runtime$evaluate(
+      "document.querySelector('[class*=\"error\"], [class*=\"invalid\"], [class*=\"alert\"]')?.innerText?.trim() ?? ''"
+    )$result$value
+
+    if (nchar(trimws(error_msg)) > 0) {
+      stop("Blocco banca: ", error_msg)
+    } else {
+      stop(
+        "Login non completato: pagina non transitata verso OTP (possibile problema di layout o selettore)"
+      )
+    }
+  }
+
   # Attendo l'OTP da Tasker via Supabase
   otp <- poll_otp(con, after_time = login_time - 30)
 
