@@ -6,7 +6,7 @@ source("R/otp_polling.R")
 source("R/scarica_excel.R")
 source("R/aggiorna_db.R")
 
-con <- dbPool(
+con <- dbConnect(
   Postgres(),
   dbname = "postgres",
   host = "aws-1-eu-west-3.pooler.supabase.com",
@@ -45,12 +45,15 @@ dbExecute(
 )
 log_info("Prossima esecuzione pianificata: {format(new_next_run)}")
 
-tryCatch({
-  scarica_excel(con)
-  aggiorna_db(con)
-  log_info("Aggiornamento completato con successo.")
-}, error = function(e) {
-  log_error("Aggiornamento fallito: {conditionMessage(e)}")
-})
+tryCatch(
+  {
+    scarica_excel(con)
+    aggiorna_db(con)
+    log_info("Aggiornamento completato con successo.")
+  },
+  error = function(e) {
+    log_error("Aggiornamento fallito: {conditionMessage(e)}")
+  }
+)
 
 dbDisconnect(con)
