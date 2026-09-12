@@ -125,6 +125,8 @@ scarica_excel <- function(con) {
   # Inserisco l'OTP nel campo
   bbva$type("#input-otpCode", otp)
 
+  Sys.sleep(rexp(1, 0.2))
+
   bbva$click(
     "#index-router > two-factor-auth-view > div > div > div > two-factor-challenge-form > form > div > haunted-button"
   )
