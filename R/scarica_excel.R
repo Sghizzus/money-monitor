@@ -119,6 +119,13 @@ scarica_excel <- function(con) {
     "#index-router > signin-view > div > div > div.col-md-7.padding-left_0 > signin-form > form > div.flex.flex-align-center.margin-bottom-xsmall > haunted-button"
   )
 
+  # Attendo che BBVA processi il login e transiti alla pagina OTP
+  Sys.sleep(5)
+  url_post_login <- bbva$session$Runtime$evaluate(
+    "window.location.href"
+  )$result$value
+  message("[INFO] URL dopo login: ", url_post_login)
+
   # Attendo l'OTP da Tasker via Supabase
   otp <- poll_otp(con, after_time = login_time - 30)
 
