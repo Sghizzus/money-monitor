@@ -130,7 +130,7 @@ scarica_excel <- function(con) {
   if (grepl("signin", url_post_login, fixed = TRUE)) {
     # Ancora sulla pagina di login: distingue blocco banca da problema tecnico
     error_msg <- bbva$session$Runtime$evaluate(
-      "document.querySelector('[class*=\"error\"], [class*=\"invalid\"], [class*=\"alert\"]')?.innerText?.trim() ?? ''"
+      "document.querySelector('#index-router > signin-view > div > div > div.col-md-7.padding-left_0 > signin-form > form > div.bg-sp-white-100.border-radius_16.padding-small.margin-bottom-small > haunted-alert')?.innerText?.trim() ?? ''"
     )$result$value
 
     if (nchar(trimws(error_msg)) > 0) {
