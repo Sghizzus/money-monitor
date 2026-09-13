@@ -124,9 +124,7 @@ scarica_excel <- function(con) {
   Sys.sleep(5)
 
   error_msg <- bbva |>
-    html_element(
-      "#m-alert-b84b87f0-a803-488f-9a43-ce37baf734e3 > div.m-alert__body > div.m-alert__content > p"
-    ) |>
+    html_element("[id^='m-alert'] .m-alert__content > p") |>
     html_text2()
 
   if (isTRUE(nchar(trimws(error_msg)) > 0)) {
