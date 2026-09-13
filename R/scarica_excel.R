@@ -123,6 +123,11 @@ scarica_excel <- function(con) {
   # Attendo che BBVA processi il login e transiti alla pagina OTP
   Sys.sleep(5)
 
+  url_attuale <- bbva$session$Runtime$evaluate(
+    "window.location.href"
+  )$result$value
+  message("[INFO] URL post-login: ", url_attuale)
+
   error_msg <- bbva |>
     html_element("[id^='m-alert'] .m-alert__content > p") |>
     html_text2()
@@ -137,7 +142,7 @@ scarica_excel <- function(con) {
   # Inserisco l'OTP nel campo
   bbva$type("#input-otpCode", otp)
 
-  Sys.sleep(rexp(1, 0.2))
+  Sys.sleep(runif(1, 1, 3))
 
   bbva$click(
     "#index-router > two-factor-auth-view > div > div > div > two-factor-challenge-form > form > div > haunted-button"
