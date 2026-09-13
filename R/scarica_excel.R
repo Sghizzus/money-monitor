@@ -123,11 +123,6 @@ scarica_excel <- function(con) {
   # Attendo che BBVA processi il login e transiti alla pagina OTP
   Sys.sleep(5)
 
-  url_attuale <- bbva$session$Runtime$evaluate(
-    "window.location.href"
-  )$result$value
-  message("[INFO] URL post-login: ", url_attuale)
-
   error_msg <- bbva |>
     html_element("[id^='m-alert'] .m-alert__content > p") |>
     html_text2()
