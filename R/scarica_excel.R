@@ -122,27 +122,15 @@ scarica_excel <- function(con) {
 
   # Attendo che BBVA processi il login e transiti alla pagina OTP
   Sys.sleep(5)
-  url_post_login <- bbva$session$Runtime$evaluate(
-    "window.location.href"
-  )$result$value
-  message("[INFO] URL dopo login: ", url_post_login)
 
-  if (str_detect(url_post_login, "signin")) {
-    # Ancora sulla pagina di login: distingue blocco banca da problema tecnico
+  error_msg <- bbva |>
+    html_element(
+      "#m-alert-b84b87f0-a803-488f-9a43-ce37baf734e3 > div.m-alert__body > div.m-alert__content > p"
+    ) |>
+    html_text2()
 
-    error_msg <- bbva |>
-      html_element(
-        "#m-alert-b84b87f0-a803-488f-9a43-ce37baf734e3 > div.m-alert__body > div.m-alert__content > p"
-      ) |>
-      html_text2()
-
-    if (isTRUE(nchar(trimws(error_msg)) > 0)) {
-      stop("Blocco banca: ", error_msg)
-    } else {
-      stop(
-        "Login non completato: pagina non transitata verso OTP (possibile problema di layout o selettore)"
-      )
-    }
+  if (isTRUE(nchar(trimws(error_msg)) > 0)) {
+    stop("Blocco banca: ", error_msg)
   }
 
   # Attendo l'OTP da Tasker via Supabase
