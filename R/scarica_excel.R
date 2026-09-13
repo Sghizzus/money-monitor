@@ -127,7 +127,7 @@ scarica_excel <- function(con) {
   )$result$value
   message("[INFO] URL dopo login: ", url_post_login)
 
-  if (str_detect(url_post_login, "signin")) {
+  if (isTRUE(str_detect(url_post_login, "signin"))) {
     # Ancora sulla pagina di login: distingue blocco banca da problema tecnico
 
     error_msg <- bbva |>
