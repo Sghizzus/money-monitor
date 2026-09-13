@@ -33,6 +33,9 @@ if (now < next_run) {
 
 log_info("Avvio aggiornamento...")
 
+# Garantisce la disconnessione dal db in ogni caso (successo o errore)
+on.exit(dbDisconnect(con), add = TRUE)
+
 # Aggiorno next_run subito, prima di tentare lo scraping.
 # Così anche in caso di errore (es. banca che blocca il login)
 # il container non ritenta ogni 15 minuti ma rispetta il delay casuale.
@@ -53,7 +56,6 @@ tryCatch(
   },
   error = function(e) {
     log_error("Aggiornamento fallito: {conditionMessage(e)}")
+    stop(e)
   }
 )
-
-dbDisconnect(con)
