@@ -20,7 +20,8 @@ next_run <- tbl(con, "scheduler") |>
   pull(next_run) |>
   with_tz("Europe/Rome")
 
-now <- now()
+now <- now() |>
+  with_tz("Europe/Rome")
 
 log_info("Ora attuale:          {format(now)}")
 log_info("Prossima esecuzione:  {format(next_run)}")
