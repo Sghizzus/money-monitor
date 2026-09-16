@@ -144,7 +144,7 @@ scarica_excel <- function(con) {
   )
 
   # Attendo il caricamento della dashboard post-OTP
-  Sys.sleep(runif(1, 5, 7))
+  Sys.sleep(runif(1, 6, 8))
 
   # Passo ai movimenti del mio conto
   bbva$click(
