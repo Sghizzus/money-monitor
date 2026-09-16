@@ -2,11 +2,15 @@ library(logger)
 library(DBI)
 library(RPostgres)
 
+# Un file di log per giorno, retention 30 giorni
 log_appender(appender_file(
-  file = "logs/money-monitor.log",
-  max_lines = 10000,
-  max_files = 5L
+  file = paste0("logs/money-monitor-", format(Sys.Date(), "%Y-%m-%d"), ".log")
 ))
+old_logs <- list.files("logs", pattern = "\\.log$", full.names = TRUE)
+old_logs <- old_logs[file.mtime(old_logs) < Sys.time() - 30 * 86400]
+if (length(old_logs) > 0) {
+  file.remove(old_logs)
+}
 
 source("R/otp_polling.R")
 source("R/scarica_excel.R")
