@@ -14,10 +14,13 @@ con <- dbConnect(
   user = "postgres.pntkrsospmzbuyelbmac",
   password = Sys.getenv("DB_PWD")
 )
+on.exit(dbDisconnect(con), add = TRUE)
 
 # Leggo il prossimo orario pianificato dal db
-next_run <- tbl(con, "scheduler") |>
-  pull(next_run) |>
+next_run <- dbGetQuery(
+  con,
+  "SELECT next_run FROM scheduler WHERE id = 1"
+)$next_run |>
   with_tz("Europe/Rome")
 
 now <- now() |>
@@ -28,14 +31,10 @@ log_info("Prossima esecuzione:  {format(next_run)}")
 
 if (now < next_run) {
   log_info("Troppo presto, esco.")
-  dbDisconnect(con)
   quit(save = "no", status = 0)
 }
 
 log_info("Avvio aggiornamento...")
-
-# Garantisce la disconnessione dal db in ogni caso (successo o errore)
-on.exit(dbDisconnect(con), add = TRUE)
 
 # Aggiorno next_run subito, prima di tentare lo scraping.
 # Così anche in caso di errore (es. banca che blocca il login)
