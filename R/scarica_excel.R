@@ -152,7 +152,7 @@ scarica_excel <- function(con) {
   )
 
   # Attendo il caricamento della pagina movimenti
-  Sys.sleep(runif(1, 4, 6))
+  Sys.sleep(runif(1, 5, 7))
 
   # Apro il menu di download
   bbva$click(
