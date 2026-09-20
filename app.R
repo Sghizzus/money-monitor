@@ -110,7 +110,6 @@ server <- function(input, output, session) {
   thematic_shiny()
 
   con <- db_connect()
-  onStop(function() dbDisconnect(con))
 
   perc <- reactive(input$perc / 100)
 
