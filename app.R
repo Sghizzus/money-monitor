@@ -99,7 +99,9 @@ ui <- page_navbar(
   title = "Money Monitor",
   theme = bs_theme(version = 5, preset = "shiny"),
   nav_panel("Dashboard", dashboard_ui),
-  nav_panel("Movimenti", movimenti_ui)
+  nav_panel("Movimenti", movimenti_ui),
+  nav_spacer(),
+  nav_item(uiOutput("info_aggiornamento"))
 )
 
 # --- Server ---
@@ -114,6 +116,34 @@ server <- function(input, output, session) {
 
   # Trigger per aggiornare il dashboard dopo ogni modifica a "ignora"
   refresh <- reactiveVal(0)
+
+  # ---- Info aggiornamento ----
+
+  scheduler_timer <- reactiveTimer(60000)
+
+  info_scheduler <- reactive({
+    scheduler_timer()
+    tryCatch(
+      dbGetQuery(con, "SELECT last_run, next_run FROM scheduler WHERE id = 1"),
+      error = function(e) data.frame(last_run = NA, next_run = NA)
+    )
+  })
+
+  fmt_dt <- function(x) {
+    if (length(x) == 0 || is.na(x)) {
+      return("—")
+    }
+    format(with_tz(as.POSIXct(x), "Europe/Rome"), "%d/%m %H:%M")
+  }
+
+  output$info_aggiornamento <- renderUI({
+    info <- info_scheduler()
+    tags$small(
+      class = "text-muted d-flex align-items-center gap-3 pe-2",
+      tags$span(bs_icon("clock-history"), " ", fmt_dt(info$last_run[1])),
+      tags$span(bs_icon("arrow-clockwise"), " ", fmt_dt(info$next_run[1]))
+    )
+  })
 
   # ---- Dashboard ----
 

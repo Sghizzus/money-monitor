@@ -54,6 +54,7 @@ tryCatch(
         {
           scarica_excel(con)
           aggiorna_db(con)
+          dbExecute(con, "UPDATE scheduler SET last_run = now() WHERE id = 1")
           log_info("Aggiornamento completato con successo.")
         },
         error = function(e) {
