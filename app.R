@@ -199,7 +199,11 @@ server <- function(input, output, session) {
       sort(decreasing = TRUE)
 
     scelte <- setNames(mesi_disp, mesi_italiani[as.character(mesi_disp)])
-    sel <- if (as.integer(input$anno) == year(today())) month(today()) else max(mesi_disp)
+    sel <- if (as.integer(input$anno) == year(today())) {
+      month(today())
+    } else {
+      max(mesi_disp)
+    }
     updateSelectInput(session, "mese", choices = scelte, selected = sel)
   })
 
@@ -215,22 +219,33 @@ server <- function(input, output, session) {
       mutate(
         ignora = sprintf(
           '<input type="checkbox" class="ignora-cb" data-id="%d" %s>',
-          id, ifelse(ignora, "checked", "")
+          id,
+          ifelse(ignora, "checked", "")
         )
       ) |>
-      select(data_valuta, data, movimento, importo, disponibile, osservazioni, ignora) |>
+      select(
+        data_valuta,
+        data,
+        movimento,
+        importo,
+        disponibile,
+        osservazioni,
+        ignora
+      ) |>
       datatable(
         escape = FALSE,
         selection = "none",
         rownames = FALSE,
         options = list(pageLength = 25),
-        callback = JS("
+        callback = JS(
+          "
           table.on('change', '.ignora-cb', function() {
             var id = parseInt($(this).data('id'));
             var checked = $(this).is(':checked');
             Shiny.setInputValue('toggle_ignora', {id: id, valore: checked}, {priority: 'event'});
           });
-        ")
+        "
+        )
       ) |>
       formatCurrency(
         columns = c("importo", "disponibile"),
