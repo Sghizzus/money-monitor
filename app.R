@@ -46,8 +46,11 @@ dashboard_ui <- layout_sidebar(
     sliderInput(
       "perc",
       "Percentuale risparmio",
-      min = 0, max = 50, value = round(100 / 9),
-      step = 1, post = "%"
+      min = 0,
+      max = 50,
+      value = round(100 / 9),
+      step = 1,
+      post = "%"
     )
   ),
   layout_column_wrap(
