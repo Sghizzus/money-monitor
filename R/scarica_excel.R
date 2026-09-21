@@ -98,6 +98,50 @@ scarica_excel <- function(con) {
 
   bbva <- read_html_live("https://www.bbva.it")
 
+  # Inietta patch stealth prima di ogni caricamento di pagina.
+  # Page.addScriptToEvaluateOnNewDocument garantisce che il codice
+  # venga eseguito PRIMA degli script della pagina — incluso il codice
+  # di bot detection di BBVA. È la stessa tecnica usata da playwright-stealth.
+  stealth_js <- "
+    // Rimuove il flag webdriver (belt-and-suspenders rispetto al flag CLI)
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+
+    // Aggiunge l'oggetto chrome tipico di un browser reale
+    if (!window.chrome) {
+      window.chrome = {
+        app: { isInstalled: false },
+        runtime: {}
+      };
+    }
+
+    // Plugin realistici (headless Chrome ne ha 0)
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [1, 2, 3, 4, 5]
+    });
+
+    // Lingue realistiche
+    Object.defineProperty(navigator, 'languages', {
+      get: () => ['it-IT', 'it', 'en-US', 'en']
+    });
+
+    // Valori hardware realistici
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+
+    // Fix per la query dei permessi notifiche
+    const _origQuery = window.navigator.permissions.query;
+    window.navigator.permissions.query = (p) =>
+      p.name === 'notifications'
+        ? Promise.resolve({ state: Notification.permission })
+        : _origQuery(p);
+  "
+
+  bbva$session$Page$addScriptToEvaluateOnNewDocument(source = stealth_js)
+
+  # Ricarica la pagina perché le patch si applichino anche alla pagina attuale
+  bbva$session$Page$reload()
+  bbva$session$Page$loadEventFired(timeout = 30000)
+
   # Muove il mouse verso coordinate casuali prima di un click,
   # simulando il comportamento umano
   human_move <- function(
