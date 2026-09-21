@@ -226,7 +226,11 @@ def scarica_excel():
                 time.sleep(random.uniform(0.5, 1.5))
                 human_move(page)
                 human_type(page, "#input-password", os.environ["BBVA_PASSWORD"])
-                time.sleep(random.uniform(1, 2))
+
+                # Tab triggera il blur sul campo password, necessario per
+                # la validazione Lit che si attiva solo all'uscita dal campo
+                page.keyboard.press("Tab")
+                time.sleep(random.uniform(0.5, 1))
 
                 login_time = datetime.now(timezone.utc)
 
@@ -246,22 +250,7 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                # Diagnostica per trovare il testo del pulsante di conferma OTP
-                testi = page.evaluate("""(() => {
-                    const deepAll = (root) => {
-                        const results = [];
-                        root.querySelectorAll('*').forEach(el => {
-                            if (el.children.length === 0 && el.textContent.trim())
-                                results.push(el.textContent.trim());
-                            if (el.shadowRoot) results.push(...deepAll(el.shadowRoot));
-                        });
-                        return results;
-                    };
-                    return deepAll(document).filter(t => t.length < 30);
-                })()""")
-                print("[DEBUG] Testi elementi foglia nella pagina OTP:", testi[:15])
-
-                js_click_text(page, "Accedi")  # aggiornare dopo aver visto il log
+                js_click_text(page, "Conferma")
                 time.sleep(random.uniform(6, 8))
 
             else:
