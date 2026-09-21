@@ -302,6 +302,33 @@ def scarica_excel():
                     return deepAll(document).filter(id => id.includes('product') || id.includes('account') || id.includes('aria'));
                 })()""")
                 print("[DEBUG] ID rilevanti nel DOM:", ids[:20])
+
+                # Diagnostica approfondita: struttura shadowRoot della card
+                struttura = page.evaluate("""(() => {
+                    const deepQuery = (root, sel) => {
+                        const el = root.querySelector(sel);
+                        if (el) return el;
+                        for (const child of root.querySelectorAll('*')) {
+                            if (child.shadowRoot) {
+                                const found = deepQuery(child.shadowRoot, sel);
+                                if (found) return found;
+                            }
+                        }
+                        return null;
+                    };
+                    const card = deepQuery(document, '[id^="aria-product-name"]');
+                    if (!card) return 'card non trovata';
+                    const sr = card.shadowRoot;
+                    if (!sr) return 'nessun shadowRoot';
+                    return Array.from(sr.querySelectorAll('*')).map(el => ({
+                        tag: el.tagName,
+                        id: el.id || '',
+                        href: el.getAttribute('href') || '',
+                        hasShadow: !!el.shadowRoot
+                    })).slice(0, 30);
+                })()""")
+                print("[DEBUG] Struttura shadowRoot card:", struttura)
+
                 raise RuntimeError("Link al conto non trovato nella dashboard")
 
             print(f"[INFO] Navigo ai movimenti: {account_href}")
