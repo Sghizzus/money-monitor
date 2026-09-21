@@ -93,11 +93,29 @@ def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
 # ---------------------------------------------------------------------------
 
 
+def js_click_text(page, text):
+    """Trova il primo elemento foglia con il testo esatto dato attraverso
+    tutti i shadow DOM annidati e lo clicca.
+    Usato per haunted-button il cui contenuto interno è uno <span>, non un <button>."""
+    page.evaluate(f"""(() => {{
+        const deepAll = (root) => {{
+            const results = [];
+            root.querySelectorAll('*').forEach(el => {{
+                results.push(el);
+                if (el.shadowRoot) results.push(...deepAll(el.shadowRoot));
+            }});
+            return results;
+        }};
+        const el = deepAll(document).find(
+            e => e.textContent.trim() === '{text}' && e.children.length === 0
+        );
+        if (el) el.click();
+        else throw new Error('Elemento con testo "{text}" non trovato');
+    }})()""")
+
+
 def js_click(page, selector):
-    """Cerca un elemento attraverso tutti i shadow DOM annidati e lo clicca.
-    Necessario perché BBVA annida più web component (index-router > signin-view >
-    signin-form) e document.querySelector/Playwright locator non riescono
-    a perforare tutti i livelli."""
+    """Cerca un elemento CSS attraverso tutti i shadow DOM annidati e lo clicca."""
     page.evaluate(f"""(() => {{
         const deepQuery = (root, sel) => {{
             const el = root.querySelector(sel);
@@ -113,7 +131,7 @@ def js_click(page, selector):
         const el = deepQuery(document, '{selector}');
         if (el) el.click();
         else throw new Error('Elemento non trovato: {selector}');
-    }})()""")
+    }})()")
 
 
 def human_move(page):
@@ -212,30 +230,7 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                # Diagnostica: mostra tutti gli elementi interattivi trovati
-                # nel DOM inclusi i shadow root annidati
-                interattivi = page.evaluate("""(() => {
-                    const deepQueryAll = (root, sel) => {
-                        const results = [];
-                        root.querySelectorAll(sel).forEach(el => results.push({
-                            tag: el.tagName,
-                            id: el.id || '',
-                            type: el.getAttribute('type') || '',
-                            text: (el.innerText || '').trim().slice(0, 40)
-                        }));
-                        root.querySelectorAll('*').forEach(child => {
-                            if (child.shadowRoot)
-                                results.push(...deepQueryAll(child.shadowRoot, sel));
-                        });
-                        return results;
-                    };
-                    return deepQueryAll(document, 'button, [role="button"], input[type="submit"]');
-                })()""")
-                print("[DEBUG] Elementi interattivi nel DOM:")
-                for el in interattivi:
-                    print(f"  {el}")
-
-                js_click(page, "button")
+                js_click_text(page, "Accedi")
 
                 time.sleep(5)
 
@@ -251,7 +246,22 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                page.locator("two-factor-challenge-form button").click()
+                # Diagnostica per trovare il testo del pulsante di conferma OTP
+                testi = page.evaluate("""(() => {
+                    const deepAll = (root) => {
+                        const results = [];
+                        root.querySelectorAll('*').forEach(el => {
+                            if (el.children.length === 0 && el.textContent.trim())
+                                results.push(el.textContent.trim());
+                            if (el.shadowRoot) results.push(...deepAll(el.shadowRoot));
+                        });
+                        return results;
+                    };
+                    return deepAll(document).filter(t => t.length < 30);
+                })()""")
+                print("[DEBUG] Testi elementi foglia nella pagina OTP:", testi[:15])
+
+                js_click_text(page, "Accedi")  # aggiornare dopo aver visto il log
                 time.sleep(random.uniform(6, 8))
 
             else:
