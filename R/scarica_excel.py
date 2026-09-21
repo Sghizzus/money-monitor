@@ -266,8 +266,8 @@ def scarica_excel():
             # ---------------------------------------------------------------
             cdp = context.new_cdp_session(page)
 
-            def cdp_click(selector, timeout=20):
-                """Clicca un elemento usando CDP, che perfora il shadow DOM con pierce:true."""
+            def cdp_find(selector, timeout=20):
+                """Trova un elemento usando CDP con pierce:true e restituisce il nodeId."""
                 for _ in range(timeout):
                     doc = cdp.send("DOM.getDocument", {"depth": -1, "pierce": True})
                     result = cdp.send(
@@ -278,30 +278,56 @@ def scarica_excel():
                         },
                     )
                     if result.get("nodeId", 0) != 0:
-                        remote = cdp.send(
-                            "DOM.resolveNode", {"nodeId": result["nodeId"]}
-                        )
-                        cdp.send(
-                            "Runtime.callFunctionOn",
-                            {
-                                "objectId": remote["object"]["objectId"],
-                                "functionDeclaration": "function() { this.click(); }",
-                            },
-                        )
-                        return
+                        return result["nodeId"]
                     time.sleep(1)
                 raise RuntimeError(
                     f"CDP: elemento '{selector}' non trovato entro {timeout}s"
                 )
 
-            # Navigo ai movimenti del conto
-            cdp_click(
+            def cdp_click(selector, timeout=20):
+                """Clicca un elemento usando CDP, che perfora il shadow DOM con pierce:true."""
+                node_id = cdp_find(selector, timeout)
+                remote = cdp.send("DOM.resolveNode", {"nodeId": node_id})
+                cdp.send(
+                    "Runtime.callFunctionOn",
+                    {
+                        "objectId": remote["object"]["objectId"],
+                        "functionDeclaration": "function() { this.click(); }",
+                    },
+                )
+
+            def cdp_get_href(selector, timeout=20):
+                """Estrae l'href di un elemento usando CDP con pierce:true."""
+                node_id = cdp_find(selector, timeout)
+                remote = cdp.send("DOM.resolveNode", {"nodeId": node_id})
+                result = cdp.send(
+                    "Runtime.callFunctionOn",
+                    {
+                        "objectId": remote["object"]["objectId"],
+                        "functionDeclaration": "function() { return this.href || this.getAttribute('href'); }",
+                        "returnByValue": True,
+                    },
+                )
+                return result.get("result", {}).get("value")
+
+            # Navigo ai movimenti: estraggo href via CDP e navigo con page.goto()
+            # (il click viene intercettato dal router SPA)
+            href = cdp_get_href(
                 "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX > haunted-link"
             )
+            if not href:
+                raise RuntimeError("href del conto non trovato")
+            print(f"[INFO] Navigo ai movimenti: {href}")
+            page.goto(href)
             time.sleep(random.uniform(5, 7))
 
-            # Apro il menu di download
-            cdp_click("transactions-links haunted-link")
+            # Apro il menu di download (selettore completo dallo script R originale)
+            cdp_click(
+                "#uid-5c2701d4 > accounts-es9766002000000000000000000651177505xxxxxxxxx > "
+                "div > div.t-main-row__container.margin-top-xsmall > div > "
+                "accounts-transactions > div > haunted-transactions > div > "
+                "transactions-links > div > ul > li:nth-child(1) > haunted-link"
+            )
             time.sleep(random.uniform(2, 3))
 
             # Scarico Excel
