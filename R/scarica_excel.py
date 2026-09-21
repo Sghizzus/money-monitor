@@ -329,7 +329,51 @@ def scarica_excel():
             time.sleep(random.uniform(5, 7))
 
             # Passo alla lista movimenti cliccando sull'IBAN del conto
-            js_click_text(page, "IT56 F035", partial=True)
+            # Usa CDP DOM.performSearch per trovare l'IBAN nel DOM appiattito
+            search = cdp.send(
+                "DOM.performSearch",
+                {"query": "IT56 F035", "includeUserAgentShadowDOM": True},
+            )
+            if search.get("resultCount", 0) == 0:
+                raise RuntimeError("IBAN non trovato nel DOM")
+            nodes = cdp.send(
+                "DOM.getSearchResults",
+                {
+                    "searchId": search["searchId"],
+                    "fromIndex": 0,
+                    "toIndex": search["resultCount"],
+                },
+            )
+            # Clicca il primo nodo trovato che è un Element (non un text node)
+            clicked = False
+            for nid in nodes["nodeIds"]:
+                try:
+                    box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
+                    content = box["model"]["content"]
+                    cx = (content[0] + content[2] + content[4] + content[6]) / 4
+                    cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                    if cx > 0 and cy > 0:
+                        for event_type in ["mousePressed", "mouseReleased"]:
+                            cdp.send(
+                                "Input.dispatchMouseEvent",
+                                {
+                                    "type": event_type,
+                                    "x": cx,
+                                    "y": cy,
+                                    "button": "left",
+                                    "clickCount": 1,
+                                },
+                            )
+                        clicked = True
+                        print(
+                            f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
+                        )
+                        break
+                except Exception:
+                    continue
+            if not clicked:
+                raise RuntimeError("IBAN trovato nel DOM ma non cliccabile")
+            cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
             time.sleep(random.uniform(5, 7))
 
             # Apro il menu di download
