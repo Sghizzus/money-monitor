@@ -98,8 +98,8 @@ def js_click(page, selector):
     Necessario perché BBVA annida più web component (index-router > signin-view >
     signin-form) e document.querySelector/Playwright locator non riescono
     a perforare tutti i livelli."""
-    page.evaluate(f"""
-        function deepQuery(root, sel) {{
+    page.evaluate(f"""(() => {{
+        const deepQuery = (root, sel) => {{
             const el = root.querySelector(sel);
             if (el) return el;
             for (const child of root.querySelectorAll('*')) {{
@@ -109,11 +109,11 @@ def js_click(page, selector):
                 }}
             }}
             return null;
-        }}
+        }};
         const el = deepQuery(document, '{selector}');
         if (el) el.click();
         else throw new Error('Elemento non trovato: {selector}');
-    """)
+    }})()""")
 
 
 def human_move(page):
@@ -214,8 +214,8 @@ def scarica_excel():
 
                 # Diagnostica: mostra tutti gli elementi interattivi trovati
                 # nel DOM inclusi i shadow root annidati
-                interattivi = page.evaluate("""
-                    function deepQueryAll(root, sel) {
+                interattivi = page.evaluate("""(() => {
+                    const deepQueryAll = (root, sel) => {
                         const results = [];
                         root.querySelectorAll(sel).forEach(el => results.push({
                             tag: el.tagName,
@@ -228,9 +228,9 @@ def scarica_excel():
                                 results.push(...deepQueryAll(child.shadowRoot, sel));
                         });
                         return results;
-                    }
-                    deepQueryAll(document, 'button, [role="button"], input[type="submit"]');
-                """)
+                    };
+                    return deepQueryAll(document, 'button, [role="button"], input[type="submit"]');
+                })()""")
                 print("[DEBUG] Elementi interattivi nel DOM:")
                 for el in interattivi:
                     print(f"  {el}")
