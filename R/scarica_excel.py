@@ -201,8 +201,10 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                # Invia il form premendo Enter (più affidabile dei web component)
-                page.keyboard.press("Enter")
+                # Submit del form via JS — bypassa il web component haunted-button
+                page.evaluate(
+                    "document.querySelector('signin-form form').requestSubmit()"
+                )
 
                 time.sleep(5)
 
@@ -218,7 +220,9 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                page.keyboard.press("Enter")
+                page.evaluate(
+                    "document.querySelector('two-factor-challenge-form form').requestSubmit()"
+                )
                 time.sleep(random.uniform(6, 8))
 
             else:
