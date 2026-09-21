@@ -169,18 +169,14 @@ def scarica_excel():
             # Se i cookie del profilo persistente sono ancora validi,
             # BBVA potrebbe non mostrare il login e andare direttamente
             # alla dashboard — in quel caso saltiamo tutto il flusso di login.
-            login_link_sel = (
-                "#header-persone-experience-fragment-master-jcr-content-header > "
-                "div.header__main.container-header > nav > ul > "
-                "li.header__actions__list.header__actions--tablet-left > div > "
-                "div.header__access__wrapper.header__access__wrapper--tablet > a"
-            )
-            login_needed = page.locator(login_link_sel).count() > 0
+            # Se il campo username è già presente siamo già sulla pagina di login
+            # (redirect automatico da cookie scaduti o primo accesso).
+            # Altrimenti navighiamo direttamente all'URL di login.
+            login_needed = page.locator("#input-user").count() == 0
 
             if login_needed:
-                print("[INFO] Login necessario, inserisco le credenziali...")
-
-                page.click(login_link_sel)
+                print("[INFO] Login necessario, navigo alla pagina di accesso...")
+                page.goto("https://www.bbva.it/nimbus/signin.html")
                 time.sleep(random.uniform(1.5, 3))
 
                 # Credenziali con ritmo umano
