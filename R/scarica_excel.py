@@ -278,8 +278,6 @@ def scarica_excel():
                         },
                     )
                     if result.get("nodeId", 0) != 0:
-                        cdp.send("DOM.focus", {"nodeId": result["nodeId"]})
-                        # Risolvi il nodo in un oggetto JS e cliccalo
                         remote = cdp.send(
                             "DOM.resolveNode", {"nodeId": result["nodeId"]}
                         )
