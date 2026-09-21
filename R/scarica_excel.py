@@ -93,6 +93,13 @@ def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
 # ---------------------------------------------------------------------------
 
 
+def js_click(page, selector):
+    """Clicca un elemento via JavaScript — necessario per i web component
+    haunted-button e haunted-link che Playwright non riesce a cliccare
+    direttamente tramite CSS selector."""
+    page.evaluate(f"document.querySelector('{selector}').click()")
+
+
 def human_move(page):
     """Simula un movimento del mouse verso coordinate casuali."""
     steps = random.randint(5, 12)
@@ -189,11 +196,12 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                # Click login
-                page.click(
+                # Click login (JS perché haunted-button ha shadow DOM)
+                js_click(
+                    page,
                     "#index-router > signin-view > div > div > "
                     "div.col-md-7.padding-left_0 > signin-form > form > "
-                    "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button"
+                    "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button",
                 )
 
                 time.sleep(5)
@@ -210,9 +218,10 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                page.click(
+                js_click(
+                    page,
                     "#index-router > two-factor-auth-view > div > div > div > "
-                    "two-factor-challenge-form > form > div > haunted-button"
+                    "two-factor-challenge-form > form > div > haunted-button",
                 )
                 time.sleep(random.uniform(6, 8))
 
@@ -220,26 +229,28 @@ def scarica_excel():
                 print("[INFO] Cookie validi, già loggato — salto il login.")
 
             # Navigo ai movimenti del conto
-            page.click(
+            js_click(
+                page,
                 "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX "
-                "> haunted-link"
+                "> haunted-link",
             )
             time.sleep(random.uniform(5, 7))
 
             # Apro il menu di download
-            page.click(
+            js_click(
+                page,
                 "#uid-5c2701d4 > "
                 "accounts-es9766002000000000000000000651177505xxxxxxxxx > div > "
                 "div.t-main-row__container.margin-top-xsmall > div > "
                 "accounts-transactions > div > haunted-transactions > div > "
-                "transactions-links > div > ul > li:nth-child(1) > haunted-link"
+                "transactions-links > div > ul > li:nth-child(1) > haunted-link",
             )
             time.sleep(random.uniform(2, 3))
 
             # Scarico Excel e attendo il completamento del download
             print("[INFO] Avvio download Excel...")
             with page.expect_download(timeout=30_000) as download_info:
-                page.click("#downloadTransactionsPDFDocument > haunted-button")
+                js_click(page, "#downloadTransactionsPDFDocument > haunted-button")
 
             download = download_info.value
             dest = Path.cwd() / download.suggested_filename
