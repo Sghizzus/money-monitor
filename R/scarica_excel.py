@@ -259,9 +259,9 @@ def scarica_excel():
             else:
                 print("[INFO] Cookie validi, già loggato — salto il login.")
 
-            # Navigo ai movimenti del conto — cerca il link navigabile
-            # dentro la card del conto attraverso tutti i shadow DOM annidati
-            page.evaluate("""(() => {
+            # Navigo ai movimenti del conto — estrae l'href e naviga direttamente
+            # (il click viene intercettato dal router SPA e non funziona)
+            account_href = page.evaluate("""(() => {
                 const deepQuery = (root, sel) => {
                     const el = root.querySelector(sel);
                     if (el) return el;
@@ -274,12 +274,14 @@ def scarica_excel():
                     return null;
                 };
                 const card = deepQuery(document, '[id^="aria-product-name"]');
-                if (!card) throw new Error('Card conto non trovata');
-                const link = deepQuery(card.shadowRoot || card, 'a[href]')
-                    || deepQuery(card, 'a[href]')
-                    || card;
-                link.click();
+                if (!card) return null;
+                const link = deepQuery(card, 'a[href]');
+                return link ? link.href : null;
             })()""")
+            if not account_href:
+                raise RuntimeError("Link al conto non trovato nella dashboard")
+            print(f"[INFO] Navigo ai movimenti: {account_href}")
+            page.goto(account_href)
             time.sleep(random.uniform(5, 7))
 
             # Apro il menu di download
