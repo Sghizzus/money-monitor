@@ -94,14 +94,20 @@ def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
 
 
 def js_click(page, selector):
-    """Clicca un elemento via JavaScript, perforando il shadow DOM
-    dei web component haunted-button e haunted-link."""
+    """Clicca un elemento web component perforando il shadow DOM.
+    composed:true è necessario perché l'evento attraversi la barriera shadow."""
     page.evaluate(f"""
         const host = document.querySelector('{selector}');
         const inner = host.shadowRoot
-            ? host.shadowRoot.querySelector('button, a')
+            ? host.shadowRoot.querySelector('button, a, [role="button"]')
             : null;
-        (inner || host).click();
+        const target = inner || host;
+        target.dispatchEvent(new MouseEvent('click', {{
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            view: window
+        }}));
     """)
 
 
@@ -201,13 +207,11 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                # force=True bypassa i controlli di visibilità e clicca alle
-                # coordinate fisiche dell'elemento, come faceva chromote
-                page.click(
+                js_click(
+                    page,
                     "#index-router > signin-view > div > div > "
                     "div.col-md-7.padding-left_0 > signin-form > form > "
                     "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button",
-                    force=True,
                 )
 
                 time.sleep(5)
@@ -224,10 +228,10 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                page.click(
+                js_click(
+                    page,
                     "#index-router > two-factor-auth-view > div > div > div > "
                     "two-factor-challenge-form > form > div > haunted-button",
-                    force=True,
                 )
                 time.sleep(random.uniform(6, 8))
 
