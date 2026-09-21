@@ -79,8 +79,19 @@ scarica_excel <- function(con) {
     )
   }
 
-  ch <- chromote::Chromote$new(
-    browser = chromote::Chrome$new(args = args)
+  ch <- tryCatch(
+    chromote::Chromote$new(browser = chromote::Chrome$new(args = args)),
+    error = function(e) {
+      # Il profilo è probabilmente in uso da un'altra istanza Chrome.
+      # Ritenta senza --user-data-dir.
+      message(
+        "[WARN] Chrome non avviato col profilo persistente (profilo in uso?). Ritento senza profilo."
+      )
+      args_no_profile <- args[!grepl("--user-data-dir", args)]
+      chromote::Chromote$new(
+        browser = chromote::Chrome$new(args = args_no_profile)
+      )
+    }
   )
   ch$default_timeout <- 30000
   chromote::set_default_chromote_object(ch)
