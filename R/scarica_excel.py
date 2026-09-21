@@ -201,9 +201,13 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                # Submit del form via JS — bypassa il web component haunted-button
-                page.evaluate(
-                    "document.querySelector('signin-form form').requestSubmit()"
+                # force=True bypassa i controlli di visibilità e clicca alle
+                # coordinate fisiche dell'elemento, come faceva chromote
+                page.click(
+                    "#index-router > signin-view > div > div > "
+                    "div.col-md-7.padding-left_0 > signin-form > form > "
+                    "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button",
+                    force=True,
                 )
 
                 time.sleep(5)
@@ -220,8 +224,10 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                page.evaluate(
-                    "document.querySelector('two-factor-challenge-form form').requestSubmit()"
+                page.click(
+                    "#index-router > two-factor-auth-view > div > div > div > "
+                    "two-factor-challenge-form > form > div > haunted-button",
+                    force=True,
                 )
                 time.sleep(random.uniform(6, 8))
 
