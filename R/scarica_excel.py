@@ -328,63 +328,55 @@ def scarica_excel():
             )
             time.sleep(random.uniform(5, 7))
 
-            # Il click sulla card del conto porta direttamente alla lista movimenti.
-            # Il click sull'IBAN serve solo se la navigazione si ferma a una pagina
-            # intermedia — lo tentiamo ma non è bloccante.
-            try:
-                search = None
-                for iban_query in ["IT56F035", "IT56 F035"]:
-                    search = cdp.send(
-                        "DOM.performSearch",
-                        {"query": iban_query, "includeUserAgentShadowDOM": True},
-                    )
-                    if search.get("resultCount", 0) > 0:
-                        break
-                    cdp.send(
-                        "DOM.discardSearchResults", {"searchId": search["searchId"]}
-                    )
-                if search and search.get("resultCount", 0) > 0:
-                    nodes = cdp.send(
-                        "DOM.getSearchResults",
-                        {
-                            "searchId": search["searchId"],
-                            "fromIndex": 0,
-                            "toIndex": search["resultCount"],
-                        },
-                    )
-                    for nid in nodes["nodeIds"]:
-                        try:
-                            box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
-                            content = box["model"]["content"]
-                            cx = (content[0] + content[2] + content[4] + content[6]) / 4
-                            cy = (content[1] + content[3] + content[5] + content[7]) / 4
-                            if cx > 0 and cy > 0:
-                                for evt in ["mousePressed", "mouseReleased"]:
-                                    cdp.send(
-                                        "Input.dispatchMouseEvent",
-                                        {
-                                            "type": evt,
-                                            "x": cx,
-                                            "y": cy,
-                                            "button": "left",
-                                            "clickCount": 1,
-                                        },
-                                    )
-                                print(
-                                    f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
-                                )
-                                break
-                        except Exception:
-                            continue
-                    cdp.send(
-                        "DOM.discardSearchResults", {"searchId": search["searchId"]}
-                    )
-            except Exception as e:
-                print(
-                    f"[INFO] Click IBAN non necessario o fallito: {e} — procedo comunque"
+            # Click sull'IBAN: porta alla lista movimenti (step obbligatorio)
+            search = None
+            for iban_query in ["IT56F035", "IT56 F035"]:
+                search = cdp.send(
+                    "DOM.performSearch",
+                    {"query": iban_query, "includeUserAgentShadowDOM": True},
                 )
+                if search.get("resultCount", 0) > 0:
+                    print(f"[INFO] IBAN trovato con query: {iban_query}")
+                    break
+                cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
+            if not search or search.get("resultCount", 0) == 0:
+                raise RuntimeError("IBAN non trovato nel DOM")
+            nodes = cdp.send(
+                "DOM.getSearchResults",
+                {
+                    "searchId": search["searchId"],
+                    "fromIndex": 0,
+                    "toIndex": search["resultCount"],
+                },
+            )
+            for nid in nodes["nodeIds"]:
+                try:
+                    box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
+                    content = box["model"]["content"]
+                    cx = (content[0] + content[2] + content[4] + content[6]) / 4
+                    cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                    if cx > 0 and cy > 0:
+                        for evt in ["mousePressed", "mouseReleased"]:
+                            cdp.send(
+                                "Input.dispatchMouseEvent",
+                                {
+                                    "type": evt,
+                                    "x": cx,
+                                    "y": cy,
+                                    "button": "left",
+                                    "clickCount": 1,
+                                },
+                            )
+                        print(
+                            f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
+                        )
+                        break
+                except Exception:
+                    continue
+            cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
 
-            time.sleep(random.uniform(4, 6))
+            # Attendo caricamento pagina movimenti
+            time.sleep(random.uniform(8, 12))
 
             # Cerco e clicco il pulsante "Excel" con CDP DOM.performSearch
             def cdp_search_click(query):
@@ -436,14 +428,21 @@ def scarica_excel():
                 cdp.send("DOM.discardSearchResults", {"searchId": s["searchId"]})
                 raise RuntimeError(f"'{query}' trovato ma non cliccabile")
 
-            # Primo click: apre la modale di selezione formato
+            # Primo click "Scarica in Excel": apre la modale
             print("[INFO] Apro modale download...")
-            cdp_search_click("Scarica in Excel")
+            for attempt in range(15):
+                try:
+                    cdp_search_click("Scarica in Excel")
+                    break
+                except RuntimeError:
+                    if attempt == 14:
+                        raise
+                    time.sleep(2)
             time.sleep(random.uniform(2, 3))
 
-            # Secondo click: conferma e scarica il file
+            # Secondo click "Excel": conferma il download nella modale
             print("[INFO] Avvio download Excel...")
-            cdp_search_click("Scarica in Excel")
+            cdp_search_click("Excel")
             time.sleep(random.uniform(1, 2))
 
             # Attendo che il file xlsx appaia nella cartella Downloads
