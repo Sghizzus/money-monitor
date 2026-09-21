@@ -261,25 +261,47 @@ def scarica_excel():
 
             # Navigo ai movimenti del conto — estrae l'href e naviga direttamente
             # (il click viene intercettato dal router SPA e non funziona)
-            account_href = page.evaluate("""(() => {
-                const deepQuery = (root, sel) => {
-                    const el = root.querySelector(sel);
-                    if (el) return el;
-                    for (const child of root.querySelectorAll('*')) {
-                        if (child.shadowRoot) {
-                            const found = deepQuery(child.shadowRoot, sel);
-                            if (found) return found;
+
+            # Attendo che la card del conto sia presente nel DOM (max 20s)
+            account_href = None
+            for _ in range(20):
+                account_href = page.evaluate("""(() => {
+                    const deepQuery = (root, sel) => {
+                        const el = root.querySelector(sel);
+                        if (el) return el;
+                        for (const child of root.querySelectorAll('*')) {
+                            if (child.shadowRoot) {
+                                const found = deepQuery(child.shadowRoot, sel);
+                                if (found) return found;
+                            }
                         }
-                    }
-                    return null;
-                };
-                const card = deepQuery(document, '[id^="aria-product-name"]');
-                if (!card) return null;
-                const link = deepQuery(card, 'a[href]');
-                return link ? link.href : null;
-            })()""")
+                        return null;
+                    };
+                    const card = deepQuery(document, '[id^="aria-product-name"]');
+                    if (!card) return null;
+                    const link = deepQuery(card, 'a[href]');
+                    return link ? link.href : null;
+                })()""")
+                if account_href:
+                    break
+                time.sleep(1)
+
             if not account_href:
+                # Diagnostica: mostra tutti gli id nel DOM
+                ids = page.evaluate("""(() => {
+                    const deepAll = (root) => {
+                        const results = [];
+                        root.querySelectorAll('[id]').forEach(el => results.push(el.id));
+                        root.querySelectorAll('*').forEach(child => {
+                            if (child.shadowRoot) results.push(...deepAll(child.shadowRoot));
+                        });
+                        return results;
+                    };
+                    return deepAll(document).filter(id => id.includes('product') || id.includes('account') || id.includes('aria'));
+                })()""")
+                print("[DEBUG] ID rilevanti nel DOM:", ids[:20])
                 raise RuntimeError("Link al conto non trovato nella dashboard")
+
             print(f"[INFO] Navigo ai movimenti: {account_href}")
             page.goto(account_href)
             time.sleep(random.uniform(5, 7))
