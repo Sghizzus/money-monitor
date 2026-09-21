@@ -385,8 +385,11 @@ def scarica_excel():
             cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
 
             # Attendo il caricamento della pagina movimenti dopo il click IBAN
-            page.wait_for_load_state("networkidle", timeout=15000)
-            time.sleep(random.uniform(3, 5))
+            try:
+                page.wait_for_load_state("networkidle", timeout=10000)
+            except Exception:
+                pass  # Le SPA raramente raggiungono networkidle — procedo comunque
+            time.sleep(random.uniform(4, 6))
 
             # Cerco e clicco il pulsante "Excel" con CDP DOM.performSearch
             def cdp_search_click(query):
@@ -438,14 +441,14 @@ def scarica_excel():
                 cdp.send("DOM.discardSearchResults", {"searchId": s["searchId"]})
                 raise RuntimeError(f"'{query}' trovato ma non cliccabile")
 
-            # Primo click Excel: apre la modale di selezione formato
+            # Primo click: apre la modale di selezione formato
             print("[INFO] Apro modale download...")
-            cdp_search_click("Excel")
+            cdp_search_click("Scarica in Excel")
             time.sleep(random.uniform(2, 3))
 
-            # Secondo click Excel: conferma e scarica il file
+            # Secondo click: conferma e scarica il file
             print("[INFO] Avvio download Excel...")
-            cdp_search_click("Excel")
+            cdp_search_click("Scarica in Excel")
             time.sleep(random.uniform(1, 2))
 
             # Attendo che il file xlsx appaia nella cartella Downloads
