@@ -263,6 +263,7 @@ def scarica_excel():
             # (il click viene intercettato dal router SPA e non funziona)
 
             # Attendo che la card del conto sia presente nel DOM (max 20s)
+            # Cerca haunted-link figlio diretto della card, poi l'<a> dentro il suo shadowRoot
             account_href = None
             for _ in range(20):
                 account_href = page.evaluate("""(() => {
@@ -277,12 +278,17 @@ def scarica_excel():
                         }
                         return null;
                     };
-                    const card = deepQuery(document, '[id^="aria-product-name"]');
-                    if (!card) return null;
-                    // Il contenuto è nel shadowRoot della card, non nel light DOM
-                    const searchRoot = card.shadowRoot || card;
-                    const link = deepQuery(searchRoot, 'a[href]');
-                    return link ? link.href : null;
+                    // Trova haunted-link direttamente dal documento (deepQuery attraversa tutti i shadow root)
+                    // Come fa il selettore R: #aria-product-name-... > haunted-link
+                    const hauntedLink = deepQuery(document, 'haunted-link');
+                    if (!hauntedLink) return null;
+                    // haunted-link ha un <a> nel suo shadowRoot
+                    const a = hauntedLink.shadowRoot
+                        ? hauntedLink.shadowRoot.querySelector('a[href]')
+                        : hauntedLink.querySelector('a[href]');
+                    if (a) return a.href;
+                    // Fallback: prova href dell'elemento stesso
+                    return hauntedLink.getAttribute('href') || null;
                 })()""")
                 if account_href:
                     break
