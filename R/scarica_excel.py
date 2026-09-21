@@ -297,26 +297,56 @@ def scarica_excel():
                 )
 
             def cdp_get_href(selector, timeout=20):
-                """Estrae l'href di un elemento usando CDP con pierce:true."""
+                """Estrae l'href di un elemento usando CDP con pierce:true.
+                Prova tutto: attributo href, proprietà JS, <a> in shadowRoot/figli."""
                 node_id = cdp_find(selector, timeout)
                 remote = cdp.send("DOM.resolveNode", {"nodeId": node_id})
                 result = cdp.send(
                     "Runtime.callFunctionOn",
                     {
                         "objectId": remote["object"]["objectId"],
-                        "functionDeclaration": "function() { return this.href || this.getAttribute('href'); }",
+                        "functionDeclaration": """function() {
+                        return {
+                            href: this.href,
+                            attrHref: this.getAttribute('href'),
+                            attrTarget: this.getAttribute('target'),
+                            attrDataHref: this.getAttribute('data-href'),
+                            shadowA: this.shadowRoot ? (this.shadowRoot.querySelector('a') || {}).href : null,
+                            childA: (this.querySelector('a') || {}).href,
+                            allAttrs: Array.from(this.attributes || []).map(a => a.name + '=' + a.value).join(', '),
+                            tag: this.tagName,
+                            hasShadow: !!this.shadowRoot,
+                            innerHTMLPreview: (this.innerHTML || '').slice(0, 300)
+                        };
+                    }""",
                         "returnByValue": True,
                     },
                 )
-                return result.get("result", {}).get("value")
+                info = result.get("result", {}).get("value", {})
+                print(f"[DEBUG] haunted-link info: {info}")
+                for key in [
+                    "href",
+                    "attrHref",
+                    "attrDataHref",
+                    "shadowA",
+                    "childA",
+                    "attrTarget",
+                ]:
+                    val = info.get(key)
+                    if val and isinstance(val, str) and ("http" in val or "/" in val):
+                        return (
+                            val
+                            if val.startswith("http")
+                            else f"https://www.bbva.it{val}"
+                        )
+                return None
 
             # Navigo ai movimenti: estraggo href via CDP e navigo con page.goto()
-            # (il click viene intercettato dal router SPA)
             href = cdp_get_href(
                 "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX > haunted-link"
             )
             if not href:
-                raise RuntimeError("href del conto non trovato")
+                raise RuntimeError("href del conto non trovato (vedi [DEBUG] sopra)")
             print(f"[INFO] Navigo ai movimenti: {href}")
             page.goto(href)
             time.sleep(random.uniform(5, 7))
