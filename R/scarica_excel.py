@@ -21,7 +21,7 @@ import random
 from pathlib import Path
 import psycopg2
 from playwright.sync_api import sync_playwright
-from playwright_stealth import stealth_sync
+from playwright_stealth import Stealth
 
 
 # ---------------------------------------------------------------------------
@@ -42,6 +42,7 @@ PROFILE_DIR = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "bbva-scraper-
 # ---------------------------------------------------------------------------
 # Polling OTP
 # ---------------------------------------------------------------------------
+
 
 def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
     """Attende e restituisce il codice OTP dalla tabella otp_relay su Supabase."""
@@ -87,6 +88,7 @@ def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
 # Interazioni umane
 # ---------------------------------------------------------------------------
 
+
 def human_move(page):
     """Simula un movimento del mouse verso coordinate casuali."""
     steps = random.randint(5, 12)
@@ -111,6 +113,7 @@ def human_type(page, selector, text):
 # Scraping principale
 # ---------------------------------------------------------------------------
 
+
 def scarica_excel():
     conn = psycopg2.connect(**DB_CONFIG)
 
@@ -119,7 +122,7 @@ def scarica_excel():
             # Profilo persistente: mantiene cookie e localStorage tra le sessioni
             context = pw.chromium.launch_persistent_context(
                 user_data_dir=str(PROFILE_DIR),
-                headless=False,            # non-headless: meno rilevabile
+                headless=False,  # non-headless: meno rilevabile
                 args=[
                     "--disable-blink-features=AutomationControlled",
                     "--window-size=1920,1080",
@@ -136,7 +139,10 @@ def scarica_excel():
             page = context.new_page()
 
             # Applica tutte le patch stealth (canvas, WebGL, navigator, ecc.)
-            stealth_sync(page)
+            Stealth(
+                navigator_languages_override=("it-IT", "it"),
+                navigator_platform_override="Win32",
+            ).apply_stealth_sync(page)
 
             # Naviga al sito
             page.goto("https://www.bbva.it")
@@ -170,6 +176,7 @@ def scarica_excel():
 
             # Segno il timestamp pre-login per il polling OTP
             from datetime import datetime, timezone
+
             login_time = datetime.now(timezone.utc)
 
             # Click sul pulsante di login
