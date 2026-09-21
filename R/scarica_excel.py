@@ -148,10 +148,10 @@ def human_move(page):
 
 
 def human_type(page, selector, text):
-    """Digita testo carattere per carattere con ritmo variabile."""
-    page.focus(selector)
-    for char in text:
-        page.keyboard.type(char, delay=random.uniform(50, 200))
+    """Digita testo carattere per carattere con ritmo variabile.
+    Usa press_sequentially che triggera correttamente gli eventi input/change
+    richiesti dai web component Lit/Haunted per aggiornare il loro stato interno."""
+    page.locator(selector).press_sequentially(text, delay=random.uniform(80, 180))
 
 
 # ---------------------------------------------------------------------------
