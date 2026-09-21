@@ -207,12 +207,8 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                js_click(
-                    page,
-                    "#index-router > signin-view > div > div > "
-                    "div.col-md-7.padding-left_0 > signin-form > form > "
-                    "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button",
-                )
+                # Playwright perfora automaticamente il shadow DOM con locator()
+                page.locator("signin-form button").click()
 
                 time.sleep(5)
 
@@ -228,39 +224,26 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                js_click(
-                    page,
-                    "#index-router > two-factor-auth-view > div > div > div > "
-                    "two-factor-challenge-form > form > div > haunted-button",
-                )
+                page.locator("two-factor-challenge-form button").click()
                 time.sleep(random.uniform(6, 8))
 
             else:
                 print("[INFO] Cookie validi, già loggato — salto il login.")
 
             # Navigo ai movimenti del conto
-            js_click(
-                page,
-                "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX "
-                "> haunted-link",
-            )
+            page.locator(
+                "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX"
+            ).locator("a, button, [role='button']").first.click()
             time.sleep(random.uniform(5, 7))
 
-            # Apro il menu di download
-            js_click(
-                page,
-                "#uid-5c2701d4 > "
-                "accounts-es9766002000000000000000000651177505xxxxxxxxx > div > "
-                "div.t-main-row__container.margin-top-xsmall > div > "
-                "accounts-transactions > div > haunted-transactions > div > "
-                "transactions-links > div > ul > li:nth-child(1) > haunted-link",
-            )
+            # Apro il menu di download (primo link nella lista download)
+            page.locator("transactions-links li").first.locator("a, button").click()
             time.sleep(random.uniform(2, 3))
 
-            # Scarico Excel e attendo il completamento del download
+            # Scarico Excel
             print("[INFO] Avvio download Excel...")
             with page.expect_download(timeout=30_000) as download_info:
-                js_click(page, "#downloadTransactionsPDFDocument > haunted-button")
+                page.locator("#downloadTransactionsPDFDocument button").click()
 
             download = download_info.value
             dest = Path.cwd() / download.suggested_filename
