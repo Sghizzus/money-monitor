@@ -259,10 +259,27 @@ def scarica_excel():
             else:
                 print("[INFO] Cookie validi, già loggato — salto il login.")
 
-            # Navigo ai movimenti del conto
-            js_click(
-                page, "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX"
-            )
+            # Navigo ai movimenti del conto — cerca il link navigabile
+            # dentro la card del conto attraverso tutti i shadow DOM annidati
+            page.evaluate("""(() => {
+                const deepQuery = (root, sel) => {
+                    const el = root.querySelector(sel);
+                    if (el) return el;
+                    for (const child of root.querySelectorAll('*')) {
+                        if (child.shadowRoot) {
+                            const found = deepQuery(child.shadowRoot, sel);
+                            if (found) return found;
+                        }
+                    }
+                    return null;
+                };
+                const card = deepQuery(document, '[id^="aria-product-name"]');
+                if (!card) throw new Error('Card conto non trovata');
+                const link = deepQuery(card.shadowRoot || card, 'a[href]')
+                    || deepQuery(card, 'a[href]')
+                    || card;
+                link.click();
+            })()""")
             time.sleep(random.uniform(5, 7))
 
             # Apro il menu di download
