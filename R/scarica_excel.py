@@ -94,10 +94,15 @@ def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
 
 
 def js_click(page, selector):
-    """Clicca un elemento via JavaScript — necessario per i web component
-    haunted-button e haunted-link che Playwright non riesce a cliccare
-    direttamente tramite CSS selector."""
-    page.evaluate(f"document.querySelector('{selector}').click()")
+    """Clicca un elemento via JavaScript, perforando il shadow DOM
+    dei web component haunted-button e haunted-link."""
+    page.evaluate(f"""
+        const host = document.querySelector('{selector}');
+        const inner = host.shadowRoot
+            ? host.shadowRoot.querySelector('button, a')
+            : null;
+        (inner || host).click();
+    """)
 
 
 def human_move(page):
@@ -196,13 +201,8 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                # Click login (JS perché haunted-button ha shadow DOM)
-                js_click(
-                    page,
-                    "#index-router > signin-view > div > div > "
-                    "div.col-md-7.padding-left_0 > signin-form > form > "
-                    "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button",
-                )
+                # Invia il form premendo Enter (più affidabile dei web component)
+                page.keyboard.press("Enter")
 
                 time.sleep(5)
 
@@ -218,11 +218,7 @@ def scarica_excel():
                 page.fill("#input-otpCode", otp)
                 time.sleep(random.uniform(1, 3))
 
-                js_click(
-                    page,
-                    "#index-router > two-factor-auth-view > div > div > div > "
-                    "two-factor-challenge-form > form > div > haunted-button",
-                )
+                page.keyboard.press("Enter")
                 time.sleep(random.uniform(6, 8))
 
             else:
