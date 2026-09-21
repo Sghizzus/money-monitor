@@ -22,6 +22,10 @@ from pathlib import Path
 import psycopg2
 from playwright.sync_api import sync_playwright
 from playwright_stealth import Stealth
+from dotenv import load_dotenv
+
+# Carica le variabili d'ambiente da .Renviron (stesso file usato da R)
+load_dotenv(".Renviron")
 
 
 # ---------------------------------------------------------------------------
