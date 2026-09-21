@@ -148,6 +148,10 @@ def scarica_excel():
                 navigator_platform_override="Win32",
             ).apply_stealth_sync(page)
 
+            from datetime import datetime, timezone
+
+            print("[INFO] Browser aperto — non interagire con la finestra.")
+
             # Naviga al sito
             page.goto("https://www.bbva.it")
             time.sleep(random.uniform(1, 2))
@@ -161,58 +165,63 @@ def scarica_excel():
 
             time.sleep(random.uniform(1, 2.5))
 
-            # Apro la pagina di login
-            page.click(
+            # Controllo se il link di login è presente (timeout breve).
+            # Se i cookie del profilo persistente sono ancora validi,
+            # BBVA potrebbe non mostrare il login e andare direttamente
+            # alla dashboard — in quel caso saltiamo tutto il flusso di login.
+            login_link_sel = (
                 "#header-persone-experience-fragment-master-jcr-content-header > "
                 "div.header__main.container-header > nav > ul > "
                 "li.header__actions__list.header__actions--tablet-left > div > "
                 "div.header__access__wrapper.header__access__wrapper--tablet > a"
             )
-            time.sleep(random.uniform(1.5, 3))
+            login_needed = page.locator(login_link_sel).count() > 0
 
-            # Inserisco le credenziali con ritmo umano
-            human_move(page)
-            human_type(page, "#input-user", os.environ["BBVA_USER"])
-            time.sleep(random.uniform(0.5, 1.5))
-            human_move(page)
-            human_type(page, "#input-password", os.environ["BBVA_PASSWORD"])
-            time.sleep(random.uniform(1, 2))
+            if login_needed:
+                print("[INFO] Login necessario, inserisco le credenziali...")
 
-            # Segno il timestamp pre-login per il polling OTP
-            from datetime import datetime, timezone
+                page.click(login_link_sel)
+                time.sleep(random.uniform(1.5, 3))
 
-            login_time = datetime.now(timezone.utc)
+                # Credenziali con ritmo umano
+                human_move(page)
+                human_type(page, "#input-user", os.environ["BBVA_USER"])
+                time.sleep(random.uniform(0.5, 1.5))
+                human_move(page)
+                human_type(page, "#input-password", os.environ["BBVA_PASSWORD"])
+                time.sleep(random.uniform(1, 2))
 
-            # Click sul pulsante di login
-            page.click(
-                "#index-router > signin-view > div > div > "
-                "div.col-md-7.padding-left_0 > signin-form > form > "
-                "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button"
-            )
+                login_time = datetime.now(timezone.utc)
 
-            # Attendo che BBVA processi il login
-            time.sleep(5)
+                # Click login
+                page.click(
+                    "#index-router > signin-view > div > div > "
+                    "div.col-md-7.padding-left_0 > signin-form > form > "
+                    "div.flex.flex-align-center.margin-bottom-xsmall > haunted-button"
+                )
 
-            # Controllo se la banca ha mostrato un errore (blocco)
-            error_el = page.query_selector("[id^='m-alert'] .m-alert__content > p")
-            if error_el:
-                error_text = error_el.inner_text().strip()
-                if error_text:
-                    raise RuntimeError(f"Blocco banca: {error_text}")
+                time.sleep(5)
 
-            # Attendo OTP da Tasker via Supabase
-            otp = poll_otp(conn, login_time)
+                # Controllo blocco banca
+                error_el = page.query_selector("[id^='m-alert'] .m-alert__content > p")
+                if error_el:
+                    error_text = error_el.inner_text().strip()
+                    if error_text:
+                        raise RuntimeError(f"Blocco banca: {error_text}")
 
-            # Inserisco OTP
-            page.fill("#input-otpCode", otp)
-            time.sleep(random.uniform(1, 3))
+                # OTP
+                otp = poll_otp(conn, login_time)
+                page.fill("#input-otpCode", otp)
+                time.sleep(random.uniform(1, 3))
 
-            # Confermo OTP
-            page.click(
-                "#index-router > two-factor-auth-view > div > div > div > "
-                "two-factor-challenge-form > form > div > haunted-button"
-            )
-            time.sleep(random.uniform(6, 8))
+                page.click(
+                    "#index-router > two-factor-auth-view > div > div > div > "
+                    "two-factor-challenge-form > form > div > haunted-button"
+                )
+                time.sleep(random.uniform(6, 8))
+
+            else:
+                print("[INFO] Cookie validi, già loggato — salto il login.")
 
             # Navigo ai movimenti del conto
             page.click(
