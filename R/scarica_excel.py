@@ -131,7 +131,7 @@ def js_click(page, selector):
         const el = deepQuery(document, '{selector}');
         if (el) el.click();
         else throw new Error('Elemento non trovato: {selector}');
-    }})()")
+    }})()""")
 
 
 def human_move(page):
