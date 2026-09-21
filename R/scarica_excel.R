@@ -51,28 +51,70 @@ source("R/otp_polling.R")
 #' }
 
 scarica_excel <- function(con) {
-  # Su Linux (es. Docker) Chrome richiede --no-sandbox perché il container
-  # non ha le capabilities kernel necessarie per la sandbox di Chrome.
-  # --disable-dev-shm-usage evita crash per /dev/shm troppo piccolo.
-  if (.Platform$OS.type != "windows") {
-    ch <- chromote::Chromote$new(
-      browser = chromote::Chrome$new(
-        args = c(
-          "--no-sandbox",
-          "--disable-dev-shm-usage",
-          "--disable-gpu",
-          "--disable-software-rasterizer",
-          "--disable-extensions",
-          "--no-first-run",
-          "--window-size=1920,1080"
-        )
-      )
-    )
-    ch$default_timeout <- 30000 # 30 secondi invece di 10
-    chromote::set_default_chromote_object(ch)
+  # Cartella profilo Chrome persistente: mantiene cookie, localStorage e
+  # cronologia tra un'esecuzione e l'altra, rendendo il browser
+  # indistinguibile da un utente reale agli occhi di BBVA.
+  profile_dir <- if (.Platform$OS.type == "windows") {
+    file.path(Sys.getenv("LOCALAPPDATA"), "bbva-scraper-profile")
+  } else {
+    file.path(Sys.getenv("HOME"), ".bbva-scraper-profile")
   }
 
+  args <- c(
+    # Rimuove navigator.webdriver = true (principale segnale di bot detection)
+    "--disable-blink-features=AutomationControlled",
+    "--window-size=1920,1080",
+    "--no-first-run",
+    paste0("--user-data-dir=", profile_dir)
+  )
+
+  # Flag aggiuntivi necessari solo su Linux/Docker
+  if (.Platform$OS.type != "windows") {
+    args <- c(
+      args,
+      "--no-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+      "--disable-software-rasterizer"
+    )
+  }
+
+  ch <- chromote::Chromote$new(
+    browser = chromote::Chrome$new(args = args)
+  )
+  ch$default_timeout <- 30000
+  chromote::set_default_chromote_object(ch)
+
   bbva <- read_html_live("https://www.bbva.it")
+
+  # Muove il mouse verso coordinate casuali prima di un click,
+  # simulando il comportamento umano
+  human_move <- function(
+    target_x = runif(1, 100, 1800),
+    target_y = runif(1, 100, 900)
+  ) {
+    steps <- sample(5:12, 1)
+    for (i in seq_len(steps)) {
+      bbva$session$Input$dispatchMouseEvent(
+        type = "mouseMoved",
+        x = target_x * i / steps + runif(1, -10, 10),
+        y = target_y * i / steps + runif(1, -10, 10)
+      )
+      Sys.sleep(runif(1, 0.01, 0.05))
+    }
+  }
+
+  # Digita testo carattere per carattere con ritmo variabile
+  human_type <- function(selector, text) {
+    bbva$session$Runtime$evaluate(
+      sprintf("document.querySelector('%s').focus()", selector)
+    )
+    for (ch in strsplit(text, "")[[1]]) {
+      bbva$session$Input$dispatchKeyEvent(type = "keyDown", text = ch)
+      bbva$session$Input$dispatchKeyEvent(type = "keyUp", text = ch)
+      Sys.sleep(runif(1, 0.05, 0.2))
+    }
+  }
 
   # Esporta bbva nel global environment solo in caso di errore
   .success <- FALSE
@@ -105,10 +147,12 @@ scarica_excel <- function(con) {
 
   Sys.sleep(runif(1, 1.5, 3))
 
-  # Inserisco le credenziali
-  bbva$type("#input-user", Sys.getenv("BBVA_USER"))
+  # Inserisco le credenziali con ritmo umano
+  human_move()
+  human_type("#input-user", Sys.getenv("BBVA_USER"))
   Sys.sleep(runif(1, 0.5, 1.5))
-  bbva$type("#input-password", Sys.getenv("BBVA_PASSWORD"))
+  human_move()
+  human_type("#input-password", Sys.getenv("BBVA_PASSWORD"))
 
   Sys.sleep(runif(1, 1, 2))
 
