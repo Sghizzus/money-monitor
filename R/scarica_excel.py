@@ -323,19 +323,14 @@ def scarica_excel():
             )
             time.sleep(random.uniform(5, 7))
 
-            # Apro il menu di download (selettore completo dallo script R originale)
-            cdp_click(
-                "#uid-5c2701d4 > accounts-es9766002000000000000000000651177505xxxxxxxxx > "
-                "div > div.t-main-row__container.margin-top-xsmall > div > "
-                "accounts-transactions > div > haunted-transactions > div > "
-                "transactions-links > div > ul > li:nth-child(1) > haunted-link"
-            )
+            # Apro il menu di download (primo link nella sezione transactions-links)
+            cdp_mouse_click("transactions-links li:nth-child(1) span.c-link")
             time.sleep(random.uniform(2, 3))
 
             # Scarico Excel
             print("[INFO] Avvio download Excel...")
             with page.expect_download(timeout=30_000) as download_info:
-                cdp_click("#downloadTransactionsPDFDocument > haunted-button")
+                cdp_mouse_click("#downloadTransactionsPDFDocument span.c-link")
 
             download = download_info.value
             dest = Path.cwd() / download.suggested_filename
