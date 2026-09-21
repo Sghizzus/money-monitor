@@ -383,7 +383,10 @@ def scarica_excel():
             if not clicked:
                 raise RuntimeError("IBAN trovato nel DOM ma non cliccabile")
             cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
-            time.sleep(random.uniform(5, 7))
+
+            # Attendo il caricamento della pagina movimenti dopo il click IBAN
+            page.wait_for_load_state("networkidle", timeout=15000)
+            time.sleep(random.uniform(3, 5))
 
             # Cerco e clicco il pulsante "Excel" con CDP DOM.performSearch
             def cdp_search_click(query):
