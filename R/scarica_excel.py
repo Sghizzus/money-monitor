@@ -94,20 +94,25 @@ def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
 
 
 def js_click(page, selector):
-    """Clicca un elemento web component perforando il shadow DOM.
-    composed:true è necessario perché l'evento attraversi la barriera shadow."""
+    """Cerca un elemento attraverso tutti i shadow DOM annidati e lo clicca.
+    Necessario perché BBVA annida più web component (index-router > signin-view >
+    signin-form) e document.querySelector/Playwright locator non riescono
+    a perforare tutti i livelli."""
     page.evaluate(f"""
-        const host = document.querySelector('{selector}');
-        const inner = host.shadowRoot
-            ? host.shadowRoot.querySelector('button, a, [role="button"]')
-            : null;
-        const target = inner || host;
-        target.dispatchEvent(new MouseEvent('click', {{
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-            view: window
-        }}));
+        function deepQuery(root, sel) {{
+            const el = root.querySelector(sel);
+            if (el) return el;
+            for (const child of root.querySelectorAll('*')) {{
+                if (child.shadowRoot) {{
+                    const found = deepQuery(child.shadowRoot, sel);
+                    if (found) return found;
+                }}
+            }}
+            return null;
+        }}
+        const el = deepQuery(document, '{selector}');
+        if (el) el.click();
+        else throw new Error('Elemento non trovato: {selector}');
     """)
 
 
@@ -207,8 +212,30 @@ def scarica_excel():
 
                 login_time = datetime.now(timezone.utc)
 
-                # Playwright perfora automaticamente il shadow DOM con locator()
-                page.locator("signin-form button").click()
+                # Diagnostica: mostra tutti gli elementi interattivi trovati
+                # nel DOM inclusi i shadow root annidati
+                interattivi = page.evaluate("""
+                    function deepQueryAll(root, sel) {
+                        const results = [];
+                        root.querySelectorAll(sel).forEach(el => results.push({
+                            tag: el.tagName,
+                            id: el.id || '',
+                            type: el.getAttribute('type') || '',
+                            text: (el.innerText || '').trim().slice(0, 40)
+                        }));
+                        root.querySelectorAll('*').forEach(child => {
+                            if (child.shadowRoot)
+                                results.push(...deepQueryAll(child.shadowRoot, sel));
+                        });
+                        return results;
+                    }
+                    deepQueryAll(document, 'button, [role="button"], input[type="submit"]');
+                """)
+                print("[DEBUG] Elementi interattivi nel DOM:")
+                for el in interattivi:
+                    print(f"  {el}")
+
+                js_click(page, "button")
 
                 time.sleep(5)
 
