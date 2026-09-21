@@ -385,20 +385,83 @@ def scarica_excel():
             cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
             time.sleep(random.uniform(5, 7))
 
-            # Apro il menu di download
-            cdp_mouse_click("transactions-links li:nth-child(1) span.c-link")
+            # Cerco e clicco il pulsante "Excel" con CDP DOM.performSearch
+            def cdp_search_click(query):
+                """Cerca testo nel DOM e clicca il primo elemento trovato."""
+                s = cdp.send(
+                    "DOM.performSearch",
+                    {
+                        "query": query,
+                        "includeUserAgentShadowDOM": True,
+                    },
+                )
+                if s.get("resultCount", 0) == 0:
+                    raise RuntimeError(f"'{query}' non trovato nel DOM")
+                ns = cdp.send(
+                    "DOM.getSearchResults",
+                    {
+                        "searchId": s["searchId"],
+                        "fromIndex": 0,
+                        "toIndex": s["resultCount"],
+                    },
+                )
+                for nid in ns["nodeIds"]:
+                    try:
+                        box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
+                        content = box["model"]["content"]
+                        cx = (content[0] + content[2] + content[4] + content[6]) / 4
+                        cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                        if cx > 0 and cy > 0:
+                            for evt in ["mousePressed", "mouseReleased"]:
+                                cdp.send(
+                                    "Input.dispatchMouseEvent",
+                                    {
+                                        "type": evt,
+                                        "x": cx,
+                                        "y": cy,
+                                        "button": "left",
+                                        "clickCount": 1,
+                                    },
+                                )
+                            print(
+                                f"[INFO] Cliccato '{query}' alle coordinate ({cx:.0f}, {cy:.0f})"
+                            )
+                            cdp.send(
+                                "DOM.discardSearchResults", {"searchId": s["searchId"]}
+                            )
+                            return
+                    except Exception:
+                        continue
+                cdp.send("DOM.discardSearchResults", {"searchId": s["searchId"]})
+                raise RuntimeError(f"'{query}' trovato ma non cliccabile")
+
+            # Primo click Excel: apre la modale di selezione formato
+            print("[INFO] Apro modale download...")
+            cdp_search_click("Excel")
             time.sleep(random.uniform(2, 3))
 
-            # Scarico Excel
+            # Secondo click Excel: conferma e scarica il file
             print("[INFO] Avvio download Excel...")
-            with page.expect_download(timeout=30_000) as download_info:
-                cdp_mouse_click("#downloadTransactionsPDFDocument span.c-link")
+            cdp_search_click("Excel")
+            time.sleep(random.uniform(1, 2))
 
-            download = download_info.value
-            dest = Path.cwd() / download.suggested_filename
-            download.save_as(dest)
+            # Attendo che il file xlsx appaia nella cartella Downloads
+            downloads_dir = Path.home() / "Downloads"
+            print("[INFO] Attendo completamento download...")
+            for _ in range(30):
+                xlsx_files = list(downloads_dir.glob("*.xlsx"))
+                if xlsx_files:
+                    break
+                time.sleep(1)
+            else:
+                raise RuntimeError("Timeout: file Excel non scaricato entro 30 secondi")
 
             context.close()
+
+        # Sposto il file più recente nella cartella del progetto
+        newest = max(xlsx_files, key=lambda f: f.stat().st_mtime)
+        dest = Path.cwd() / newest.name
+        newest.rename(dest)
 
         print(f"[INFO] Excel scaricato con successo: {dest.name}")
         return str(dest)
