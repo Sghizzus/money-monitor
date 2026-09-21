@@ -330,12 +330,21 @@ def scarica_excel():
 
             # Passo alla lista movimenti cliccando sull'IBAN del conto
             # Usa CDP DOM.performSearch per trovare l'IBAN nel DOM appiattito
-            search = cdp.send(
-                "DOM.performSearch",
-                {"query": "IT56F035", "includeUserAgentShadowDOM": True},
-            )
+            # Prova con e senza spazi
+            search = None
+            for iban_query in ["IT56F035", "IT56 F035"]:
+                search = cdp.send(
+                    "DOM.performSearch",
+                    {"query": iban_query, "includeUserAgentShadowDOM": True},
+                )
+                if search.get("resultCount", 0) > 0:
+                    print(f"[INFO] IBAN trovato con query: {iban_query}")
+                    break
+                cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
             if search.get("resultCount", 0) == 0:
-                raise RuntimeError("IBAN non trovato nel DOM")
+                raise RuntimeError(
+                    "IBAN non trovato nel DOM (provato con e senza spazi)"
+                )
             nodes = cdp.send(
                 "DOM.getSearchResults",
                 {
