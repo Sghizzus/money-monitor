@@ -260,19 +260,34 @@ def scarica_excel():
                 print("[INFO] Cookie validi, già loggato — salto il login.")
 
             # Navigo ai movimenti del conto
-            page.locator(
-                "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX"
-            ).locator("a, button, [role='button']").first.click()
+            js_click(
+                page, "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX"
+            )
             time.sleep(random.uniform(5, 7))
 
-            # Apro il menu di download (primo link nella lista download)
-            page.locator("transactions-links li").first.locator("a, button").click()
+            # Apro il menu di download
+            # Diagnostica: trova il testo dei link di download disponibili
+            testi_download = page.evaluate("""(() => {
+                const deepAll = (root) => {
+                    const results = [];
+                    root.querySelectorAll('*').forEach(el => {
+                        if (el.children.length === 0 && el.textContent.trim())
+                            results.push(el.textContent.trim());
+                        if (el.shadowRoot) results.push(...deepAll(el.shadowRoot));
+                    });
+                    return results;
+                };
+                return deepAll(document).filter(t => t.length < 40);
+            })()""")
+            print("[DEBUG] Testi nella pagina movimenti:", testi_download[:20])
+
+            js_click(page, "transactions-links haunted-link")
             time.sleep(random.uniform(2, 3))
 
             # Scarico Excel
             print("[INFO] Avvio download Excel...")
             with page.expect_download(timeout=30_000) as download_info:
-                page.locator("#downloadTransactionsPDFDocument button").click()
+                js_click_text(page, "Excel")
 
             download = download_info.value
             dest = Path.cwd() / download.suggested_filename
