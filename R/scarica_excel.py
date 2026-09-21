@@ -93,10 +93,15 @@ def poll_otp(conn, after_timestamp, timeout_sec=120, interval_sec=5):
 # ---------------------------------------------------------------------------
 
 
-def js_click_text(page, text):
-    """Trova il primo elemento foglia con il testo esatto dato attraverso
+def js_click_text(page, text, partial=False):
+    """Trova il primo elemento foglia con il testo dato attraverso
     tutti i shadow DOM annidati e lo clicca.
-    Usato per haunted-button il cui contenuto interno è uno <span>, non un <button>."""
+    Se partial=True, cerca testo che contiene la stringa (utile per IBAN)."""
+    match_fn = (
+        "e.textContent.includes('" + text + "')"
+        if partial
+        else "e.textContent.trim() === '" + text + "'"
+    )
     page.evaluate(f"""(() => {{
         const deepAll = (root) => {{
             const results = [];
@@ -107,7 +112,7 @@ def js_click_text(page, text):
             return results;
         }};
         const el = deepAll(document).find(
-            e => e.textContent.trim() === '{text}' && e.children.length === 0
+            e => {match_fn} && e.children.length === 0
         );
         if (el) el.click();
         else throw new Error('Elemento con testo "{text}" non trovato');
@@ -323,7 +328,11 @@ def scarica_excel():
             )
             time.sleep(random.uniform(5, 7))
 
-            # Apro il menu di download (primo link nella sezione transactions-links)
+            # Passo alla lista movimenti cliccando sull'IBAN del conto
+            js_click_text(page, "IT56 F035", partial=True)
+            time.sleep(random.uniform(5, 7))
+
+            # Apro il menu di download
             cdp_mouse_click("transactions-links li:nth-child(1) span.c-link")
             time.sleep(random.uniform(2, 3))
 
