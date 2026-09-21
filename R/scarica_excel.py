@@ -259,115 +259,57 @@ def scarica_excel():
             else:
                 print("[INFO] Cookie validi, già loggato — salto il login.")
 
-            # Navigo ai movimenti del conto — estrae l'href e naviga direttamente
-            # (il click viene intercettato dal router SPA e non funziona)
+            # ---------------------------------------------------------------
+            # Navigazione post-login tramite CDP (Chrome DevTools Protocol)
+            # CDP con pierce:true è l'unico modo per attraversare shadow DOM
+            # annidati in modo affidabile — è lo stesso metodo usato da chromote in R.
+            # ---------------------------------------------------------------
+            cdp = context.new_cdp_session(page)
 
-            # Attendo che la card del conto sia presente nel DOM (max 20s)
-            # Cerca haunted-link figlio diretto della card, poi l'<a> dentro il suo shadowRoot
-            account_href = None
-            for _ in range(20):
-                account_href = page.evaluate("""(() => {
-                    const deepQuery = (root, sel) => {
-                        const el = root.querySelector(sel);
-                        if (el) return el;
-                        for (const child of root.querySelectorAll('*')) {
-                            if (child.shadowRoot) {
-                                const found = deepQuery(child.shadowRoot, sel);
-                                if (found) return found;
-                            }
-                        }
-                        return null;
-                    };
-                    // Trova haunted-link direttamente dal documento (deepQuery attraversa tutti i shadow root)
-                    // Come fa il selettore R: #aria-product-name-... > haunted-link
-                    const hauntedLink = deepQuery(document, 'haunted-link');
-                    if (!hauntedLink) return null;
-                    // haunted-link ha un <a> nel suo shadowRoot
-                    const a = hauntedLink.shadowRoot
-                        ? hauntedLink.shadowRoot.querySelector('a[href]')
-                        : hauntedLink.querySelector('a[href]');
-                    if (a) return a.href;
-                    // Fallback: prova href dell'elemento stesso
-                    return hauntedLink.getAttribute('href') || null;
-                })()""")
-                if account_href:
-                    break
-                time.sleep(1)
+            def cdp_click(selector, timeout=20):
+                """Clicca un elemento usando CDP, che perfora il shadow DOM con pierce:true."""
+                for _ in range(timeout):
+                    doc = cdp.send("DOM.getDocument", {"depth": -1, "pierce": True})
+                    result = cdp.send(
+                        "DOM.querySelector",
+                        {
+                            "nodeId": doc["root"]["nodeId"],
+                            "selector": selector,
+                        },
+                    )
+                    if result.get("nodeId", 0) != 0:
+                        cdp.send("DOM.focus", {"nodeId": result["nodeId"]})
+                        # Risolvi il nodo in un oggetto JS e cliccalo
+                        remote = cdp.send(
+                            "DOM.resolveNode", {"nodeId": result["nodeId"]}
+                        )
+                        cdp.send(
+                            "Runtime.callFunctionOn",
+                            {
+                                "objectId": remote["object"]["objectId"],
+                                "functionDeclaration": "function() { this.click(); }",
+                            },
+                        )
+                        return
+                    time.sleep(1)
+                raise RuntimeError(
+                    f"CDP: elemento '{selector}' non trovato entro {timeout}s"
+                )
 
-            if not account_href:
-                # Diagnostica: mostra tutti gli id nel DOM
-                ids = page.evaluate("""(() => {
-                    const deepAll = (root) => {
-                        const results = [];
-                        root.querySelectorAll('[id]').forEach(el => results.push(el.id));
-                        root.querySelectorAll('*').forEach(child => {
-                            if (child.shadowRoot) results.push(...deepAll(child.shadowRoot));
-                        });
-                        return results;
-                    };
-                    return deepAll(document).filter(id => id.includes('product') || id.includes('account') || id.includes('aria'));
-                })()""")
-                print("[DEBUG] ID rilevanti nel DOM:", ids[:20])
-
-                # Diagnostica: children dirette della card e del suo parent
-                struttura = page.evaluate("""(() => {
-                    const deepQuery = (root, sel) => {
-                        const el = root.querySelector(sel);
-                        if (el) return el;
-                        for (const child of root.querySelectorAll('*')) {
-                            if (child.shadowRoot) {
-                                const found = deepQuery(child.shadowRoot, sel);
-                                if (found) return found;
-                            }
-                        }
-                        return null;
-                    };
-                    const card = deepQuery(document, '[id^="aria-product-name"]');
-                    if (!card) return {error: 'card non trovata'};
-                    const info = (el) => ({
-                        tag: el.tagName, id: el.id || '',
-                        href: el.getAttribute('href') || '',
-                        hasShadow: !!el.shadowRoot,
-                        childCount: el.children.length
-                    });
-                    return {
-                        card: info(card),
-                        parent: info(card.parentElement),
-                        cardChildren: Array.from(card.children).map(info),
-                        parentChildren: Array.from(card.parentElement.children).map(info)
-                    };
-                })()""")
-                print("[DEBUG] Struttura DOM intorno alla card:", struttura)
-
-                raise RuntimeError("Link al conto non trovato nella dashboard")
-
-            print(f"[INFO] Navigo ai movimenti: {account_href}")
-            page.goto(account_href)
+            # Navigo ai movimenti del conto
+            cdp_click(
+                "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX > haunted-link"
+            )
             time.sleep(random.uniform(5, 7))
 
             # Apro il menu di download
-            # Diagnostica: trova il testo dei link di download disponibili
-            testi_download = page.evaluate("""(() => {
-                const deepAll = (root) => {
-                    const results = [];
-                    root.querySelectorAll('*').forEach(el => {
-                        if (el.children.length === 0 && el.textContent.trim())
-                            results.push(el.textContent.trim());
-                        if (el.shadowRoot) results.push(...deepAll(el.shadowRoot));
-                    });
-                    return results;
-                };
-                return deepAll(document).filter(t => t.length < 40);
-            })()""")
-            print("[DEBUG] Testi nella pagina movimenti:", testi_download[:20])
-
-            js_click(page, "transactions-links haunted-link")
+            cdp_click("transactions-links haunted-link")
             time.sleep(random.uniform(2, 3))
 
             # Scarico Excel
             print("[INFO] Avvio download Excel...")
             with page.expect_download(timeout=30_000) as download_info:
-                js_click_text(page, "Excel")
+                cdp_click("#downloadTransactionsPDFDocument > haunted-button")
 
             download = download_info.value
             dest = Path.cwd() / download.suggested_filename
