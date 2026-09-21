@@ -328,67 +328,62 @@ def scarica_excel():
             )
             time.sleep(random.uniform(5, 7))
 
-            # Passo alla lista movimenti cliccando sull'IBAN del conto
-            # Usa CDP DOM.performSearch per trovare l'IBAN nel DOM appiattito
-            # Prova con e senza spazi
-            search = None
-            for iban_query in ["IT56F035", "IT56 F035"]:
-                search = cdp.send(
-                    "DOM.performSearch",
-                    {"query": iban_query, "includeUserAgentShadowDOM": True},
-                )
-                if search.get("resultCount", 0) > 0:
-                    print(f"[INFO] IBAN trovato con query: {iban_query}")
-                    break
-                cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
-            if search.get("resultCount", 0) == 0:
-                raise RuntimeError(
-                    "IBAN non trovato nel DOM (provato con e senza spazi)"
-                )
-            nodes = cdp.send(
-                "DOM.getSearchResults",
-                {
-                    "searchId": search["searchId"],
-                    "fromIndex": 0,
-                    "toIndex": search["resultCount"],
-                },
-            )
-            # Clicca il primo nodo trovato che è un Element (non un text node)
-            clicked = False
-            for nid in nodes["nodeIds"]:
-                try:
-                    box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
-                    content = box["model"]["content"]
-                    cx = (content[0] + content[2] + content[4] + content[6]) / 4
-                    cy = (content[1] + content[3] + content[5] + content[7]) / 4
-                    if cx > 0 and cy > 0:
-                        for event_type in ["mousePressed", "mouseReleased"]:
-                            cdp.send(
-                                "Input.dispatchMouseEvent",
-                                {
-                                    "type": event_type,
-                                    "x": cx,
-                                    "y": cy,
-                                    "button": "left",
-                                    "clickCount": 1,
-                                },
-                            )
-                        clicked = True
-                        print(
-                            f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
-                        )
-                        break
-                except Exception:
-                    continue
-            if not clicked:
-                raise RuntimeError("IBAN trovato nel DOM ma non cliccabile")
-            cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
-
-            # Attendo il caricamento della pagina movimenti dopo il click IBAN
+            # Il click sulla card del conto porta direttamente alla lista movimenti.
+            # Il click sull'IBAN serve solo se la navigazione si ferma a una pagina
+            # intermedia — lo tentiamo ma non è bloccante.
             try:
-                page.wait_for_load_state("networkidle", timeout=10000)
-            except Exception:
-                pass  # Le SPA raramente raggiungono networkidle — procedo comunque
+                search = None
+                for iban_query in ["IT56F035", "IT56 F035"]:
+                    search = cdp.send(
+                        "DOM.performSearch",
+                        {"query": iban_query, "includeUserAgentShadowDOM": True},
+                    )
+                    if search.get("resultCount", 0) > 0:
+                        break
+                    cdp.send(
+                        "DOM.discardSearchResults", {"searchId": search["searchId"]}
+                    )
+                if search and search.get("resultCount", 0) > 0:
+                    nodes = cdp.send(
+                        "DOM.getSearchResults",
+                        {
+                            "searchId": search["searchId"],
+                            "fromIndex": 0,
+                            "toIndex": search["resultCount"],
+                        },
+                    )
+                    for nid in nodes["nodeIds"]:
+                        try:
+                            box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
+                            content = box["model"]["content"]
+                            cx = (content[0] + content[2] + content[4] + content[6]) / 4
+                            cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                            if cx > 0 and cy > 0:
+                                for evt in ["mousePressed", "mouseReleased"]:
+                                    cdp.send(
+                                        "Input.dispatchMouseEvent",
+                                        {
+                                            "type": evt,
+                                            "x": cx,
+                                            "y": cy,
+                                            "button": "left",
+                                            "clickCount": 1,
+                                        },
+                                    )
+                                print(
+                                    f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
+                                )
+                                break
+                        except Exception:
+                            continue
+                    cdp.send(
+                        "DOM.discardSearchResults", {"searchId": search["searchId"]}
+                    )
+            except Exception as e:
+                print(
+                    f"[INFO] Click IBAN non necessario o fallito: {e} — procedo comunque"
+                )
+
             time.sleep(random.uniform(4, 6))
 
             # Cerco e clicco il pulsante "Excel" con CDP DOM.performSearch
