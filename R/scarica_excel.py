@@ -247,8 +247,11 @@ def scarica_excel():
 
                 # OTP
                 otp = poll_otp(conn, login_time)
-                page.fill("#input-otpCode", otp)
-                time.sleep(random.uniform(1, 3))
+                page.locator("#input-otpCode").press_sequentially(
+                    otp, delay=random.uniform(80, 180)
+                )
+                page.keyboard.press("Tab")
+                time.sleep(random.uniform(0.5, 1))
 
                 js_click_text(page, "Conferma")
                 time.sleep(random.uniform(6, 8))
