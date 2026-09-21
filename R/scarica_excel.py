@@ -279,7 +279,9 @@ def scarica_excel():
                     };
                     const card = deepQuery(document, '[id^="aria-product-name"]');
                     if (!card) return null;
-                    const link = deepQuery(card, 'a[href]');
+                    // Il contenuto è nel shadowRoot della card, non nel light DOM
+                    const searchRoot = card.shadowRoot || card;
+                    const link = deepQuery(searchRoot, 'a[href]');
                     return link ? link.href : null;
                 })()""")
                 if account_href:
