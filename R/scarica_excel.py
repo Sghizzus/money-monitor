@@ -321,59 +321,62 @@ def scarica_excel():
                         },
                     )
 
-            # Navigo ai movimenti: click sullo span interno del haunted-link
-            # (non ha href — la navigazione è gestita via JS click handler)
-            cdp_mouse_click(
-                "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX > haunted-link span.c-link"
-            )
-            time.sleep(random.uniform(5, 7))
-
-            # Click sull'IBAN: porta alla lista movimenti (step obbligatorio)
-            search = None
-            for iban_query in ["IT56F035", "IT56 F035"]:
-                search = cdp.send(
-                    "DOM.performSearch",
-                    {"query": iban_query, "includeUserAgentShadowDOM": True},
-                )
-                if search.get("resultCount", 0) > 0:
-                    print(f"[INFO] IBAN trovato con query: {iban_query}")
-                    break
-                cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
-            if not search or search.get("resultCount", 0) == 0:
-                raise RuntimeError("IBAN non trovato nel DOM")
-            nodes = cdp.send(
-                "DOM.getSearchResults",
-                {
-                    "searchId": search["searchId"],
-                    "fromIndex": 0,
-                    "toIndex": search["resultCount"],
-                },
-            )
-            for nid in nodes["nodeIds"]:
-                try:
-                    box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
-                    content = box["model"]["content"]
-                    cx = (content[0] + content[2] + content[4] + content[6]) / 4
-                    cy = (content[1] + content[3] + content[5] + content[7]) / 4
-                    if cx > 0 and cy > 0:
-                        for evt in ["mousePressed", "mouseReleased"]:
-                            cdp.send(
-                                "Input.dispatchMouseEvent",
-                                {
-                                    "type": evt,
-                                    "x": cx,
-                                    "y": cy,
-                                    "button": "left",
-                                    "clickCount": 1,
-                                },
-                            )
-                        print(
-                            f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
+            # Click sull'IBAN dalla dashboard: porta direttamente alla lista movimenti.
+            # Aspetta fino a 20s che la dashboard carichi e l'IBAN sia cliccabile.
+            clicked_iban = False
+            for attempt in range(20):
+                for iban_query in ["IT56F035", "IT56 F035"]:
+                    search = cdp.send(
+                        "DOM.performSearch",
+                        {"query": iban_query, "includeUserAgentShadowDOM": True},
+                    )
+                    if search.get("resultCount", 0) == 0:
+                        cdp.send(
+                            "DOM.discardSearchResults", {"searchId": search["searchId"]}
                         )
+                        continue
+                    nodes = cdp.send(
+                        "DOM.getSearchResults",
+                        {
+                            "searchId": search["searchId"],
+                            "fromIndex": 0,
+                            "toIndex": search["resultCount"],
+                        },
+                    )
+                    for nid in nodes["nodeIds"]:
+                        try:
+                            box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
+                            content = box["model"]["content"]
+                            cx = (content[0] + content[2] + content[4] + content[6]) / 4
+                            cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                            if cx > 0 and cy > 0:
+                                for evt in ["mousePressed", "mouseReleased"]:
+                                    cdp.send(
+                                        "Input.dispatchMouseEvent",
+                                        {
+                                            "type": evt,
+                                            "x": cx,
+                                            "y": cy,
+                                            "button": "left",
+                                            "clickCount": 1,
+                                        },
+                                    )
+                                print(
+                                    f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
+                                )
+                                clicked_iban = True
+                        except Exception:
+                            continue
+                    cdp.send(
+                        "DOM.discardSearchResults", {"searchId": search["searchId"]}
+                    )
+                    if clicked_iban:
                         break
-                except Exception:
-                    continue
-            cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
+                if clicked_iban:
+                    break
+                time.sleep(1)
+            if not clicked_iban:
+                raise RuntimeError("IBAN non trovato o non cliccabile entro 20s")
 
             # Attendo caricamento pagina movimenti
             time.sleep(random.uniform(8, 12))
