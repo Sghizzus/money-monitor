@@ -448,13 +448,32 @@ def scarica_excel():
             time.sleep(random.uniform(3, 5))
 
             # Secondo click: bottone "Scarica in Excel" DENTRO la modale (last=True)
-            # expect_download cattura il file prima che Playwright lo cancelli
+            # Usiamo page.on("download") invece di expect_download perché
+            # BBVA chiude il browser appena parte il download, prima che
+            # expect_download possa completare save_as.
             print("[INFO] Avvio download Excel...")
             dest = Path.cwd() / "movimenti.xlsx"
-            with page.expect_download(timeout=60_000) as dl:
-                cdp_search_click("Scarica in Excel", last=True)
-            # save_as aspetta il completamento del download prima di procedere
-            dl.value.save_as(str(dest))
+            download_done = [False]
+
+            def on_download(download):
+                try:
+                    download.save_as(str(dest))
+                    download_done[0] = True
+                    print(f"[INFO] File salvato: {dest.name}")
+                except Exception as e:
+                    print(f"[WARN] Errore nel salvataggio: {e}")
+
+            page.on("download", on_download)
+            cdp_search_click("Scarica in Excel", last=True)
+
+            # Attendo che il download sia completato (max 60s)
+            for _ in range(60):
+                if download_done[0]:
+                    break
+                time.sleep(1)
+
+            if not download_done[0]:
+                raise RuntimeError("Timeout: download non completato entro 60 secondi")
 
         context.close()
         print(f"[INFO] Excel scaricato con successo: {dest.name}")
