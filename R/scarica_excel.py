@@ -182,7 +182,7 @@ def scarica_excel():
                 locale="it-IT",
                 timezone_id="Europe/Rome",
                 viewport={"width": 1920, "height": 1080},
-                accept_downloads=False,  # lascia che il browser scarichi nella cartella normale
+                accept_downloads=True,
             )
             context.set_default_timeout(30_000)
 
@@ -452,13 +452,10 @@ def scarica_excel():
             # BBVA chiude il browser appena parte il download, prima che
             # expect_download possa completare save_as.
             print("[INFO] Avvio download Excel...")
-            dest = Path.cwd() / "movimenti.xlsx"
-            # Segna il timestamp e clicca — il file va in ~/Downloads
-            # come farebbe un utente normale (accept_downloads=False)
+            # Chrome salva in ~/Downloads come .tmp durante il download
             download_start = time.time()
             cdp_search_click("Scarica in Excel", last=True)
 
-            # Attendo che appaia un file nuovo in ~/Downloads (max 60s)
             print("[INFO] Attendo completamento download...")
             downloads_dir = Path.home() / "Downloads"
             new_file = None
@@ -469,10 +466,10 @@ def scarica_excel():
                     if f.is_file()
                     and f.stat().st_mtime > download_start
                     and not f.name.endswith(".crdownload")
-                    and not f.name.endswith(".tmp")
                 ]
                 if candidates:
                     new_file = max(candidates, key=lambda f: f.stat().st_mtime)
+                    time.sleep(3)  # attende che la scrittura sia completata
                     break
                 time.sleep(1)
 
@@ -481,9 +478,11 @@ def scarica_excel():
 
         context.close()
 
-        # Sposta il file UUID da Downloads nella cartella del progetto come movimenti.xlsx
+        # Copia il file (anche .tmp) nella cartella del progetto come movimenti.xlsx
+        import shutil
+
         dest = Path.cwd() / "movimenti.xlsx"
-        new_file.rename(dest)
+        shutil.copy2(str(new_file), str(dest))
         print(f"[INFO] Excel scaricato con successo: {dest.name}")
         return str(dest)
 
