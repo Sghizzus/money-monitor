@@ -396,14 +396,34 @@ def scarica_excel():
                             "Runtime.callFunctionOn",
                             {
                                 "objectId": obj_id,
-                                "functionDeclaration": "function() { let el = this; if (el.nodeType === 3) el = el.parentElement; while (el && typeof el.click !== 'function') el = el.parentElement; if (el) { el.scrollIntoView({block:'center'}); el.click(); } }",
+                                "functionDeclaration": "function() { let el = this; if (el.nodeType === 3) el = el.parentElement; if (el) el.scrollIntoView({block:'center', inline:'center'}); }",
                             },
                         )
-                        print(f"[INFO] Cliccato '{query}' via scrollIntoView+click")
-                        cdp.send(
-                            "DOM.discardSearchResults", {"searchId": s["searchId"]}
-                        )
-                        return
+                        time.sleep(0.3)
+                        # Dopo scrollIntoView legge le coordinate aggiornate e fa click fisico
+                        box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
+                        content = box["model"]["content"]
+                        cx = (content[0] + content[2] + content[4] + content[6]) / 4
+                        cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                        if cx > 0 and cy > 0:
+                            for evt in ["mousePressed", "mouseReleased"]:
+                                cdp.send(
+                                    "Input.dispatchMouseEvent",
+                                    {
+                                        "type": evt,
+                                        "x": cx,
+                                        "y": cy,
+                                        "button": "left",
+                                        "clickCount": 1,
+                                    },
+                                )
+                            print(
+                                f"[INFO] Cliccato '{query}' alle coordinate ({cx:.0f}, {cy:.0f})"
+                            )
+                            cdp.send(
+                                "DOM.discardSearchResults", {"searchId": s["searchId"]}
+                            )
+                            return
                     except Exception:
                         continue
                 cdp.send("DOM.discardSearchResults", {"searchId": s["searchId"]})
