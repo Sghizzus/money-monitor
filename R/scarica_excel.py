@@ -421,30 +421,42 @@ def scarica_excel():
                     time.sleep(2)
             time.sleep(random.uniform(2, 3))
 
+            # Registro il timestamp prima del click per ignorare file xlsx preesistenti
+            download_start = time.time()
+
             # Secondo click "Excel": conferma il download nella modale
             print("[INFO] Avvio download Excel...")
             cdp_search_click("Excel")
-            time.sleep(random.uniform(1, 2))
 
-            # Attendo che il file xlsx appaia nella cartella Downloads
+            # Attendo che appaia un file xlsx NUOVO nella cartella Downloads
             downloads_dir = Path.home() / "Downloads"
             print("[INFO] Attendo completamento download...")
-            for _ in range(30):
-                xlsx_files = list(downloads_dir.glob("*.xlsx"))
-                if xlsx_files:
+            new_file = None
+            for _ in range(60):
+                candidates = [
+                    f
+                    for f in downloads_dir.glob("*.xlsx")
+                    if f.stat().st_mtime > download_start
+                    and not f.name.endswith(".crdownload")
+                ]
+                if candidates:
+                    new_file = max(candidates, key=lambda f: f.stat().st_mtime)
                     break
                 time.sleep(1)
-            else:
-                raise RuntimeError("Timeout: file Excel non scaricato entro 30 secondi")
+
+            if not new_file:
+                raise RuntimeError(
+                    "Timeout: nessun file Excel scaricato entro 60 secondi"
+                )
 
             context.close()
 
-        # Sposto il file più recente nella cartella del progetto
-        newest = max(xlsx_files, key=lambda f: f.stat().st_mtime)
-        dest = Path.cwd() / newest.name
-        newest.rename(dest)
+        # Sposto il file nella cartella del progetto
+        dest = Path.cwd() / new_file.name
+        new_file.rename(dest)
 
         print(f"[INFO] Excel scaricato con successo: {dest.name}")
+        return str(dest)
         return str(dest)
 
     finally:
