@@ -167,6 +167,9 @@ def human_type(page, selector, text):
 def scarica_excel():
     conn = psycopg2.connect(**DB_CONFIG)
 
+    downloads_dir = Path.home() / "Downloads"
+    download_start = None
+
     try:
         with sync_playwright() as pw:
             # Profilo persistente: mantiene cookie e localStorage tra le sessioni
@@ -452,50 +455,52 @@ def scarica_excel():
             # BBVA chiude il browser appena parte il download, prima che
             # expect_download possa completare save_as.
             print("[INFO] Avvio download Excel...")
-            downloads_dir = Path.home() / "Downloads"
             download_start = time.time()
 
             # Clicca e ignora qualsiasi errore dovuto alla chiusura del browser
             try:
                 cdp_search_click("Scarica in Excel", last=True)
             except Exception:
-                pass  # il browser si chiude durante/dopo il click — è normale
+                pass
 
-        # Chiude il context fuori dal with sync_playwright per evitare errori
-        try:
-            context.close()
-        except Exception:
-            pass
+    except Exception as e:
+        if download_start is None:
+            raise  # errore avvenuto prima del click — rilanciamo
+        # Se siamo arrivati al click, l'event loop chiuso è atteso — procediamo
+        print(
+            f"[INFO] Playwright chiuso (normale dopo il download): {type(e).__name__}"
+        )
 
-        # Aspetta il file FUORI da Playwright — il browser è già chiuso
-        import shutil
+    # Aspetta il file FUORI da Playwright — indipendentemente da come è uscito
+    if download_start is None:
+        raise RuntimeError("Script terminato prima del click sul download")
 
-        print("[INFO] Attendo completamento download...")
-        new_file = None
-        for _ in range(60):
-            candidates = [
-                f
-                for f in downloads_dir.iterdir()
-                if f.is_file()
-                and f.stat().st_mtime > download_start
-                and not f.name.endswith(".crdownload")
-            ]
-            if candidates:
-                new_file = max(candidates, key=lambda f: f.stat().st_mtime)
-                time.sleep(3)  # attende che la scrittura sia completata
-                break
-            time.sleep(1)
+    import shutil
 
-        if not new_file:
-            raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
+    print("[INFO] Attendo completamento download...")
+    new_file = None
+    for _ in range(60):
+        candidates = [
+            f
+            for f in downloads_dir.iterdir()
+            if f.is_file()
+            and f.stat().st_mtime > download_start
+            and not f.name.endswith(".crdownload")
+        ]
+        if candidates:
+            new_file = max(candidates, key=lambda f: f.stat().st_mtime)
+            time.sleep(3)
+            break
+        time.sleep(1)
 
-        dest = Path.cwd() / "movimenti.xlsx"
-        shutil.copy2(str(new_file), str(dest))
-        print(f"[INFO] Excel scaricato con successo: {dest.name}")
-        return str(dest)
+    if not new_file:
+        raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
 
-    finally:
-        conn.close()
+    dest = Path.cwd() / "movimenti.xlsx"
+    shutil.copy2(str(new_file), str(dest))
+    print(f"[INFO] Excel scaricato con successo: {dest.name}")
+    conn.close()
+    return str(dest)
 
 
 # ---------------------------------------------------------------------------
