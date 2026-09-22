@@ -449,16 +449,19 @@ def scarica_excel():
             print("[INFO] Avvio download Excel...")
             cdp_search_click("Scarica in Excel", last=True)
 
-            # Attendo che appaia un file xlsx NUOVO nella cartella Downloads
+            # Attendo che appaia un file NUOVO nella cartella Downloads.
+            # BBVA scarica il file con nome UUID senza estensione.
             downloads_dir = Path.home() / "Downloads"
             print("[INFO] Attendo completamento download...")
             new_file = None
             for _ in range(60):
                 candidates = [
                     f
-                    for f in downloads_dir.glob("*.xlsx")
-                    if f.stat().st_mtime > download_start
+                    for f in downloads_dir.iterdir()
+                    if f.is_file()
+                    and f.stat().st_mtime > download_start
                     and not f.name.endswith(".crdownload")
+                    and not f.name.endswith(".tmp")
                 ]
                 if candidates:
                     new_file = max(candidates, key=lambda f: f.stat().st_mtime)
@@ -466,14 +469,13 @@ def scarica_excel():
                 time.sleep(1)
 
             if not new_file:
-                raise RuntimeError(
-                    "Timeout: nessun file Excel scaricato entro 60 secondi"
-                )
+                raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
 
             context.close()
 
-        # Sposto il file nella cartella del progetto
-        dest = Path.cwd() / new_file.name
+        # Sposto il file nella cartella del progetto forzando estensione .xlsx
+        dest_name = new_file.stem + ".xlsx" if not new_file.suffix else new_file.name
+        dest = Path.cwd() / dest_name
         new_file.rename(dest)
 
         print(f"[INFO] Excel scaricato con successo: {dest.name}")
