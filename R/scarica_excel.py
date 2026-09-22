@@ -182,7 +182,7 @@ def scarica_excel():
                 locale="it-IT",
                 timezone_id="Europe/Rome",
                 viewport={"width": 1920, "height": 1080},
-                accept_downloads=True,
+                accept_downloads=False,  # lascia che il browser scarichi nella cartella normale
             )
             context.set_default_timeout(30_000)
 
@@ -453,33 +453,37 @@ def scarica_excel():
             # expect_download possa completare save_as.
             print("[INFO] Avvio download Excel...")
             dest = Path.cwd() / "movimenti.xlsx"
-            download_done = [False]
-
-            def on_download(download):
-                try:
-                    download.save_as(str(dest))
-                    download_done[0] = True
-                    print(f"[INFO] File salvato: {dest.name}")
-                except Exception as e:
-                    print(f"[WARN] Errore nel salvataggio: {e}")
-
-            # BBVA apre una nuova tab su web.bbva.it per il download —
-            # registriamo il handler su tutte le pagine del context
-            page.on("download", on_download)
-            context.on("page", lambda p: p.on("download", on_download))
-
+            # Segna il timestamp e clicca — il file va in ~/Downloads
+            # come farebbe un utente normale (accept_downloads=False)
+            download_start = time.time()
             cdp_search_click("Scarica in Excel", last=True)
 
-            # Attendo che il download sia completato (max 60s)
+            # Attendo che appaia un file nuovo in ~/Downloads (max 60s)
+            print("[INFO] Attendo completamento download...")
+            downloads_dir = Path.home() / "Downloads"
+            new_file = None
             for _ in range(60):
-                if download_done[0]:
+                candidates = [
+                    f
+                    for f in downloads_dir.iterdir()
+                    if f.is_file()
+                    and f.stat().st_mtime > download_start
+                    and not f.name.endswith(".crdownload")
+                    and not f.name.endswith(".tmp")
+                ]
+                if candidates:
+                    new_file = max(candidates, key=lambda f: f.stat().st_mtime)
                     break
                 time.sleep(1)
 
-            if not download_done[0]:
-                raise RuntimeError("Timeout: download non completato entro 60 secondi")
+            if not new_file:
+                raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
 
         context.close()
+
+        # Sposta il file UUID da Downloads nella cartella del progetto come movimenti.xlsx
+        dest = Path.cwd() / "movimenti.xlsx"
+        new_file.rename(dest)
         print(f"[INFO] Excel scaricato con successo: {dest.name}")
         return str(dest)
 
