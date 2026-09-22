@@ -463,7 +463,11 @@ def scarica_excel():
                 except Exception as e:
                     print(f"[WARN] Errore nel salvataggio: {e}")
 
+            # BBVA apre una nuova tab su web.bbva.it per il download —
+            # registriamo il handler su tutte le pagine del context
             page.on("download", on_download)
+            context.on("page", lambda p: p.on("download", on_download))
+
             cdp_search_click("Scarica in Excel", last=True)
 
             # Attendo che il download sia completato (max 60s)
