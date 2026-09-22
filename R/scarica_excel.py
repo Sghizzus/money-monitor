@@ -322,26 +322,27 @@ def scarica_excel():
                         },
                     )
 
-            # Click sull'IBAN dalla dashboard: porta direttamente alla lista movimenti.
-            # Aspetta fino a 20s che la dashboard carichi e l'IBAN sia cliccabile.
+            # Step 1: click sulla card del conto
+            cdp_mouse_click(
+                "#aria-product-name-ES9766002000000000000000000651177505XXXXXXXXX > haunted-link span.c-link"
+            )
+            time.sleep(random.uniform(5, 7))
+
+            # Step 2: click sull'IBAN per arrivare alla lista movimenti
             clicked_iban = False
             for attempt in range(20):
-                for iban_query in ["IT56F035", "IT56 F035"]:
-                    search = cdp.send(
-                        "DOM.performSearch",
-                        {"query": iban_query, "includeUserAgentShadowDOM": True},
-                    )
-                    if search.get("resultCount", 0) == 0:
-                        cdp.send(
-                            "DOM.discardSearchResults", {"searchId": search["searchId"]}
-                        )
-                        continue
+                search = cdp.send(
+                    "DOM.performSearch",
+                    {"query": "IT56", "includeUserAgentShadowDOM": True},
+                )
+                count = search.get("resultCount", 0)
+                if count > 0:
                     nodes = cdp.send(
                         "DOM.getSearchResults",
                         {
                             "searchId": search["searchId"],
                             "fromIndex": 0,
-                            "toIndex": search["resultCount"],
+                            "toIndex": count,
                         },
                     )
                     for nid in nodes["nodeIds"]:
@@ -368,11 +369,7 @@ def scarica_excel():
                                 clicked_iban = True
                         except Exception:
                             continue
-                    cdp.send(
-                        "DOM.discardSearchResults", {"searchId": search["searchId"]}
-                    )
-                    if clicked_iban:
-                        break
+                cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
                 if clicked_iban:
                     break
                 time.sleep(1)
