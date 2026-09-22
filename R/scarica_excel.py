@@ -347,26 +347,18 @@ def scarica_excel():
                     )
                     for nid in nodes["nodeIds"]:
                         try:
-                            box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
-                            content = box["model"]["content"]
-                            cx = (content[0] + content[2] + content[4] + content[6]) / 4
-                            cy = (content[1] + content[3] + content[5] + content[7]) / 4
-                            if cx > 0 and cy > 0:
-                                for evt in ["mousePressed", "mouseReleased"]:
-                                    cdp.send(
-                                        "Input.dispatchMouseEvent",
-                                        {
-                                            "type": evt,
-                                            "x": cx,
-                                            "y": cy,
-                                            "button": "left",
-                                            "clickCount": 1,
-                                        },
-                                    )
-                                print(
-                                    f"[INFO] Cliccato IBAN alle coordinate ({cx:.0f}, {cy:.0f})"
-                                )
-                                clicked_iban = True
+                            remote = cdp.send("DOM.resolveNode", {"nodeId": nid})
+                            obj_id = remote["object"]["objectId"]
+                            # Scrolla in vista e clicca via JS (funziona anche fuori viewport)
+                            cdp.send(
+                                "Runtime.callFunctionOn",
+                                {
+                                    "objectId": obj_id,
+                                    "functionDeclaration": "function() { this.scrollIntoView({block:'center'}); this.click(); }",
+                                },
+                            )
+                            print("[INFO] Cliccato IBAN via scrollIntoView+click")
+                            clicked_iban = True
                         except Exception:
                             continue
                 cdp.send("DOM.discardSearchResults", {"searchId": search["searchId"]})
