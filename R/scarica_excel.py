@@ -270,6 +270,7 @@ def scarica_excel():
             # annidati in modo affidabile — è lo stesso metodo usato da chromote in R.
             # ---------------------------------------------------------------
             cdp = context.new_cdp_session(page)
+            cdp.send("DOM.enable")
 
             def cdp_find(selector, timeout=20):
                 """Trova un elemento usando CDP con pierce:true e restituisce il nodeId."""
