@@ -354,7 +354,7 @@ def scarica_excel():
                                 "Runtime.callFunctionOn",
                                 {
                                     "objectId": obj_id,
-                                    "functionDeclaration": "function() { this.scrollIntoView({block:'center'}); this.click(); }",
+                                    "functionDeclaration": "function() { let el = this; if (el.nodeType === 3) el = el.parentElement; while (el && typeof el.click !== 'function') el = el.parentElement; if (el) { el.scrollIntoView({block:'center'}); el.click(); } }",
                                 },
                             )
                             print("[INFO] Cliccato IBAN via scrollIntoView+click")
