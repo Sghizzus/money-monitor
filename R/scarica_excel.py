@@ -452,34 +452,42 @@ def scarica_excel():
             # BBVA chiude il browser appena parte il download, prima che
             # expect_download possa completare save_as.
             print("[INFO] Avvio download Excel...")
-            # Chrome salva in ~/Downloads come .tmp durante il download
-            download_start = time.time()
-            cdp_search_click("Scarica in Excel", last=True)
-
-            print("[INFO] Attendo completamento download...")
             downloads_dir = Path.home() / "Downloads"
-            new_file = None
-            for _ in range(60):
-                candidates = [
-                    f
-                    for f in downloads_dir.iterdir()
-                    if f.is_file()
-                    and f.stat().st_mtime > download_start
-                    and not f.name.endswith(".crdownload")
-                ]
-                if candidates:
-                    new_file = max(candidates, key=lambda f: f.stat().st_mtime)
-                    time.sleep(3)  # attende che la scrittura sia completata
-                    break
-                time.sleep(1)
+            download_start = time.time()
 
-            if not new_file:
-                raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
+            # Clicca e ignora qualsiasi errore dovuto alla chiusura del browser
+            try:
+                cdp_search_click("Scarica in Excel", last=True)
+            except Exception:
+                pass  # il browser si chiude durante/dopo il click — è normale
 
-        context.close()
+        # Chiude il context fuori dal with sync_playwright per evitare errori
+        try:
+            context.close()
+        except Exception:
+            pass
 
-        # Copia il file (anche .tmp) nella cartella del progetto come movimenti.xlsx
+        # Aspetta il file FUORI da Playwright — il browser è già chiuso
         import shutil
+
+        print("[INFO] Attendo completamento download...")
+        new_file = None
+        for _ in range(60):
+            candidates = [
+                f
+                for f in downloads_dir.iterdir()
+                if f.is_file()
+                and f.stat().st_mtime > download_start
+                and not f.name.endswith(".crdownload")
+            ]
+            if candidates:
+                new_file = max(candidates, key=lambda f: f.stat().st_mtime)
+                time.sleep(3)  # attende che la scrittura sia completata
+                break
+            time.sleep(1)
+
+        if not new_file:
+            raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
 
         dest = Path.cwd() / "movimenti.xlsx"
         shutil.copy2(str(new_file), str(dest))
