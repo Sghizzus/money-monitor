@@ -371,7 +371,10 @@ def scarica_excel():
             # Attendo caricamento pagina movimenti
             time.sleep(random.uniform(8, 12))
 
-            # Cerco e clicco il pulsante "Excel" con CDP DOM.performSearch
+            # Cerco e clicco il pulsante "
+            #
+            #
+            # " con CDP DOM.performSearch
             def cdp_search_click(query, last=False):
                 """Cerca testo nel DOM e clicca il parent element via scrollIntoView+click."""
                 s = cdp.send(
@@ -440,21 +443,21 @@ def scarica_excel():
                     if attempt == 14:
                         raise
                     time.sleep(2)
-            time.sleep(random.uniform(2, 3))
 
-            # Playwright intercetta il download prima che sparisca dalla temp dir.
-            # page.expect_download() cattura qualsiasi file scaricato (UUID incluso)
-            # e lo salva esplicitamente dove vogliamo.
+            # Attendo che la modale sia visibile
+            time.sleep(random.uniform(3, 5))
+
+            # Secondo click: bottone "Scarica in Excel" DENTRO la modale (last=True)
+            # expect_download cattura il file prima che Playwright lo cancelli
             print("[INFO] Avvio download Excel...")
             dest = Path.cwd() / "movimenti.xlsx"
             with page.expect_download(timeout=60_000) as dl:
                 cdp_search_click("Scarica in Excel", last=True)
+            # save_as aspetta il completamento del download prima di procedere
             dl.value.save_as(str(dest))
 
-            context.close()
-
+        context.close()
         print(f"[INFO] Excel scaricato con successo: {dest.name}")
-        return str(dest)
         return str(dest)
 
     finally:
