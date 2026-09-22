@@ -372,7 +372,7 @@ def scarica_excel():
             time.sleep(random.uniform(8, 12))
 
             # Cerco e clicco il pulsante "Excel" con CDP DOM.performSearch
-            def cdp_search_click(query):
+            def cdp_search_click(query, last=False):
                 """Cerca testo nel DOM e clicca il parent element via scrollIntoView+click."""
                 s = cdp.send(
                     "DOM.performSearch",
@@ -388,7 +388,8 @@ def scarica_excel():
                         "toIndex": s["resultCount"],
                     },
                 )
-                for nid in ns["nodeIds"]:
+                node_ids = list(reversed(ns["nodeIds"])) if last else ns["nodeIds"]
+                for nid in node_ids:
                     try:
                         remote = cdp.send("DOM.resolveNode", {"nodeId": nid})
                         obj_id = remote["object"]["objectId"]
@@ -444,9 +445,9 @@ def scarica_excel():
             # Registro il timestamp prima del click per ignorare file xlsx preesistenti
             download_start = time.time()
 
-            # Secondo click "Excel": conferma il download nella modale
+            # Secondo click "Scarica in Excel": quello DENTRO la modale (last=True)
             print("[INFO] Avvio download Excel...")
-            cdp_search_click("Excel")
+            cdp_search_click("Scarica in Excel", last=True)
 
             # Attendo che appaia un file xlsx NUOVO nella cartella Downloads
             downloads_dir = Path.home() / "Downloads"
