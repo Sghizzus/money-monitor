@@ -489,6 +489,29 @@ def scarica_excel():
             # Secondo click: avvia il download
             print("[INFO] Avvio download Excel...")
             download_start = time.time()
+
+            # Diagnostica: mostra coordinate del pulsante prima di cliccare
+            try:
+                nid = cdp_find(
+                    "#downloadTransactionsPDFDocument > haunted-button", timeout=5
+                )
+                remote = cdp.send("DOM.resolveNode", {"nodeId": nid})
+                diag = cdp.send(
+                    "Runtime.callFunctionOn",
+                    {
+                        "objectId": remote["object"]["objectId"],
+                        "functionDeclaration": """function() {
+                        this.scrollIntoView({block:'center'});
+                        const r = this.getBoundingClientRect();
+                        return {x: r.left + r.width/2, y: r.top + r.height/2, w: r.width, h: r.height};
+                    }""",
+                        "returnByValue": True,
+                    },
+                )
+                print(f"[DEBUG] Posizione pulsante: {diag['result']['value']}")
+            except Exception as e:
+                print(f"[DEBUG] Pulsante non trovato: {e}")
+
             try:
                 cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
                 print(
