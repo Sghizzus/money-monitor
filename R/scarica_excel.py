@@ -457,62 +457,8 @@ def scarica_excel():
             download_start = time.time()
 
             try:
-                s2 = cdp.send(
-                    "DOM.performSearch",
-                    {"query": "Scarica in Excel", "includeUserAgentShadowDOM": True},
-                )
-                ns2 = cdp.send(
-                    "DOM.getSearchResults",
-                    {
-                        "searchId": s2["searchId"],
-                        "fromIndex": 0,
-                        "toIndex": s2["resultCount"],
-                    },
-                )
-                best_nid, best_dist = None, float("inf")
-                for nid in ns2["nodeIds"]:
-                    try:
-                        remote = cdp.send("DOM.resolveNode", {"nodeId": nid})
-                        obj_id = remote["object"]["objectId"]
-                        cdp.send(
-                            "Runtime.callFunctionOn",
-                            {
-                                "objectId": obj_id,
-                                "functionDeclaration": "function() { let el = this; if (el.nodeType === 3) el = el.parentElement; if (el) el.scrollIntoView({block:'center', inline:'center'}); }",
-                            },
-                        )
-                        time.sleep(0.2)
-                        box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
-                        content = box["model"]["content"]
-                        cx = (content[0] + content[2] + content[4] + content[6]) / 4
-                        cy = (content[1] + content[3] + content[5] + content[7]) / 4
-                        dist = abs(cx - 960) + abs(
-                            cy - 540
-                        )  # distanza dal centro 1920x1080
-                        if (
-                            0 < cy < 900 and dist < best_dist
-                        ):  # esclude elementi fuori viewport
-                            best_dist = dist
-                            best_nid = nid
-                            best_cx, best_cy = cx, cy
-                    except Exception:
-                        continue
-                cdp.send("DOM.discardSearchResults", {"searchId": s2["searchId"]})
-                if best_nid:
-                    print(
-                        f"[INFO] Click modale download alle coordinate ({best_cx:.0f}, {best_cy:.0f})"
-                    )
-                    for evt in ["mousePressed", "mouseReleased"]:
-                        cdp.send(
-                            "Input.dispatchMouseEvent",
-                            {
-                                "type": evt,
-                                "x": best_cx,
-                                "y": best_cy,
-                                "button": "left",
-                                "clickCount": 1,
-                            },
-                        )
+                cdp_click("#downloadTransactionsPDFDocument")
+                print("[INFO] Click su #downloadTransactionsPDFDocument")
             except Exception:
                 pass
 
