@@ -306,9 +306,18 @@ def scarica_excel():
                 )
 
             def cdp_mouse_click(selector, timeout=20):
-                """Trova un elemento via CDP e simula un click alle sue coordinate fisiche.
-                Più affidabile di .click() per gli elementi con handler JS custom."""
+                """Trova un elemento via CDP, lo scrolla in vista e fa click fisico."""
                 node_id = cdp_find(selector, timeout)
+                # Scrolla in vista prima di leggere le coordinate
+                remote = cdp.send("DOM.resolveNode", {"nodeId": node_id})
+                cdp.send(
+                    "Runtime.callFunctionOn",
+                    {
+                        "objectId": remote["object"]["objectId"],
+                        "functionDeclaration": "function() { this.scrollIntoView({block:'center', inline:'center'}); }",
+                    },
+                )
+                time.sleep(0.3)
                 box = cdp.send("DOM.getBoxModel", {"nodeId": node_id})
                 content = box["model"]["content"]
                 cx = (content[0] + content[2] + content[4] + content[6]) / 4
