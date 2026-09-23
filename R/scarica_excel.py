@@ -457,7 +457,7 @@ def scarica_excel():
             download_start = time.time()
 
             try:
-                cdp_click("#downloadTransactionsPDFDocument")
+                cdp_mouse_click("#downloadTransactionsPDFDocument")
                 print("[INFO] Click su #downloadTransactionsPDFDocument")
             except Exception:
                 pass
