@@ -461,91 +461,23 @@ def scarica_excel():
             # Attendo che la modale sia visibile
             time.sleep(random.uniform(3, 5))
 
-            # Handler download registrato su TUTTE le pagine del context
-            # (BBVA apre il download su una nuova tab web.bbva.it)
-            dest = Path.cwd() / "movimenti.xlsx"
-            download_done = [False]
-
-            def on_download(download):
-                try:
-                    download.save_as(str(dest))
-                    download_done[0] = True
-                    print(f"[INFO] Download salvato: {dest.name}")
-                except Exception as e:
-                    print(f"[WARN] Errore salvataggio: {e}")
-
-            page.on("download", on_download)
-            context.on("page", lambda p: p.on("download", on_download))
-
-            # Secondo click: avvia il download
+            # Secondo click: avvia il download.
+            # expect_download pre-registra l'attesa PRIMA del click —
+            # con launch_persistent_context il context rimane aperto
+            # anche dopo la chiusura della pagina, quindi save_as funziona.
             print("[INFO] Avvio download Excel...")
             download_start = time.time()
+            dest = Path.cwd() / "movimenti.xlsx"
 
-            # Diagnostica: mostra coordinate del pulsante prima di cliccare
             try:
-                nid = cdp_find(
-                    "#downloadTransactionsPDFDocument > haunted-button", timeout=5
-                )
-                remote = cdp.send("DOM.resolveNode", {"nodeId": nid})
-                diag = cdp.send(
-                    "Runtime.callFunctionOn",
-                    {
-                        "objectId": remote["object"]["objectId"],
-                        "functionDeclaration": """function() {
-                        this.scrollIntoView({block:'center'});
-                        const r = this.getBoundingClientRect();
-                        return {x: r.left + r.width/2, y: r.top + r.height/2, w: r.width, h: r.height};
-                    }""",
-                        "returnByValue": True,
-                    },
-                )
-                print(f"[DEBUG] Posizione pulsante: {diag['result']['value']}")
+                with page.expect_download(timeout=60_000) as dl:
+                    cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
+                dl.value.save_as(str(dest))
+                print(f"[INFO] Download salvato: {dest.name}")
+                new_file = dest
             except Exception as e:
-                print(f"[DEBUG] Pulsante non trovato: {e}")
-
-            try:
-                cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
-                print(
-                    "[INFO] Click su #downloadTransactionsPDFDocument > haunted-button"
-                )
-            except Exception:
-                pass
-
-            # Attende il download — controlla handler e qualsiasi file nuovo in cwd
-            print("[INFO] Attendo completamento download...")
-            cwd = Path.cwd()
-            IGNORE_EXT = {
-                ".py",
-                ".R",
-                ".bat",
-                ".lock",
-                ".json",
-                ".md",
-                ".txt",
-                ".log",
-                ".sql",
-                ".Rproj",
-            }
-            new_file = None
-            for _ in range(60):
-                if download_done[0]:
-                    new_file = dest
-                    break
-                # Playwright salva con UUID in cwd (downloads_path) — cerca qualsiasi file nuovo
-                candidates = [
-                    f
-                    for f in cwd.iterdir()
-                    if f.is_file()
-                    and f.stat().st_mtime > download_start
-                    and f.suffix not in IGNORE_EXT
-                    and not f.name.startswith(".")
-                ]
-                if candidates:
-                    new_file = max(candidates, key=lambda f: f.stat().st_mtime)
-                    print(f"[INFO] File trovato: {new_file.name}")
-                    time.sleep(2)
-                    break
-                time.sleep(1)
+                print(f"[WARN] expect_download fallito: {e}")
+                new_file = None
 
     except Exception as e:
         if download_start is None:
