@@ -24,17 +24,25 @@ fmt_eur <- label_currency(
 )
 
 mesi_italiani <- c(
-  "1" = "Gennaio", "2" = "Febbraio",  "3" = "Marzo",
-  "4" = "Aprile",  "5" = "Maggio",    "6" = "Giugno",
-  "7" = "Luglio",  "8" = "Agosto",    "9" = "Settembre",
-  "10" = "Ottobre","11" = "Novembre", "12" = "Dicembre"
+  "1" = "Gennaio",
+  "2" = "Febbraio",
+  "3" = "Marzo",
+  "4" = "Aprile",
+  "5" = "Maggio",
+  "6" = "Giugno",
+  "7" = "Luglio",
+  "8" = "Agosto",
+  "9" = "Settembre",
+  "10" = "Ottobre",
+  "11" = "Novembre",
+  "12" = "Dicembre"
 )
 
 tipo_label <- function(tipo, valore) {
   case_when(
-    tipo == "fisso"         ~ paste0("Fisso (", fmt_eur(valore), ")"),
+    tipo == "fisso" ~ paste0("Fisso (", fmt_eur(valore), ")"),
     tipo == "perc_guadagni" ~ paste0(valore, "% dei guadagni"),
-    tipo == "perc_residuo"  ~ paste0(valore, "% del residuo"),
+    tipo == "perc_residuo" ~ paste0(valore, "% del residuo"),
     .default = tipo
   )
 }
@@ -47,16 +55,34 @@ modal_budget_dlg <- function() {
     size = "m",
     easyClose = TRUE,
     textInput("budget_nome", "Nome"),
-    numericInput("budget_ordine", "Ordine (sequenza di applicazione)", value = 99, min = 1, step = 1),
-    selectInput("budget_tipo", "Tipo", choices = c(
-      "Importo fisso (\u20ac)" = "fisso",
-      "% dei guadagni lordi"   = "perc_guadagni",
-      "% del residuo precedente" = "perc_residuo"
-    )),
-    numericInput("budget_valore", "Valore (importo in \u20ac oppure percentuale)", value = 0, min = 0, step = 0.01),
-    checkboxInput("budget_accantonamento",
-                  "Accantonamento \u2014 nessuna spesa da tracciare (es. risparmio)",
-                  value = FALSE),
+    numericInput(
+      "budget_ordine",
+      "Ordine (sequenza di applicazione)",
+      value = 99,
+      min = 1,
+      step = 1
+    ),
+    selectInput(
+      "budget_tipo",
+      "Tipo",
+      choices = c(
+        "Importo fisso (\u20ac)" = "fisso",
+        "% dei guadagni lordi" = "perc_guadagni",
+        "% del residuo precedente" = "perc_residuo"
+      )
+    ),
+    numericInput(
+      "budget_valore",
+      "Valore (importo in \u20ac oppure percentuale)",
+      value = 0,
+      min = 0,
+      step = 0.01
+    ),
+    checkboxInput(
+      "budget_accantonamento",
+      "Accantonamento \u2014 nessuna spesa da tracciare (es. risparmio)",
+      value = FALSE
+    ),
     footer = tagList(
       modalButton("Annulla"),
       actionButton("btn_salva_budget", "Salva", class = "btn-primary")
@@ -71,7 +97,7 @@ dashboard_ui <- tagList(
     width = 1 / 3,
     fill = FALSE,
     value_box(
-      title = "Guadagni del mese",
+      title = textOutput("guadagni_label"),
       value = textOutput("guadagni"),
       theme = "success",
       showcase = bs_icon("graph-up-arrow")
@@ -107,12 +133,24 @@ budget_ui <- tagList(
       "Configurazione budget",
       span(
         class = "ms-auto d-flex gap-2",
-        actionButton("btn_add_budget", "Aggiungi",
-                     icon = icon("plus"), class = "btn-sm btn-primary"),
-        actionButton("btn_edit_budget", "Modifica",
-                     icon = icon("pencil"), class = "btn-sm btn-secondary"),
-        actionButton("btn_del_budget", "Elimina",
-                     icon = icon("trash"), class = "btn-sm btn-danger")
+        actionButton(
+          "btn_add_budget",
+          "Aggiungi",
+          icon = icon("plus"),
+          class = "btn-sm btn-primary"
+        ),
+        actionButton(
+          "btn_edit_budget",
+          "Modifica",
+          icon = icon("pencil"),
+          class = "btn-sm btn-secondary"
+        ),
+        actionButton(
+          "btn_del_budget",
+          "Elimina",
+          icon = icon("trash"),
+          class = "btn-sm btn-danger"
+        )
       )
     ),
     DTOutput("tbl_budget_config")
@@ -136,7 +174,7 @@ ui <- page_navbar(
   title = "Money Monitor",
   theme = bs_theme(version = 5, preset = "shiny"),
   nav_panel("Dashboard", dashboard_ui),
-  nav_panel("Budget",    budget_ui),
+  nav_panel("Budget", budget_ui),
   nav_panel("Movimenti", movimenti_ui),
   nav_spacer(),
   nav_item(uiOutput("info_aggiornamento"))
@@ -148,11 +186,11 @@ server <- function(input, output, session) {
   thematic_shiny()
 
   con <- db_connect()
-  onStop(function() dbDisconnect(con))
+  onStop(function() poolClose(con))
 
-  refresh         <- reactiveVal(0)
+  refresh <- reactiveVal(0)
   budgets_refresh <- reactiveVal(0)
-  budget_editing  <- reactiveVal(NULL)  # NULL = add, list = budget row da modificare
+  budget_editing <- reactiveVal(NULL) # NULL = add, list = budget row da modificare
 
   # ---- Info aggiornamento (navbar) ----
 
@@ -167,7 +205,9 @@ server <- function(input, output, session) {
   })
 
   fmt_dt <- function(x) {
-    if (length(x) == 0 || is.na(x)) return("\u2014")
+    if (length(x) == 0 || is.na(x)) {
+      return("\u2014")
+    }
     format(with_tz(as.POSIXct(x), "Europe/Rome"), "%d/%m %H:%M")
   }
 
@@ -196,6 +236,12 @@ server <- function(input, output, session) {
 
   # ---- Dashboard ----
 
+  output$guadagni_label <- renderText({
+    refresh()
+    p <- periodo_attuale(con)
+    paste0("Guadagni dal ", format(p$da, "%d/%m"))
+  })
+
   output$guadagni <- renderText({
     refresh()
     fmt_eur(guadagni_del_mese(con))
@@ -204,7 +250,7 @@ server <- function(input, output, session) {
   output$budget_spendibile <- renderText({
     refresh()
     guadagni <- guadagni_del_mese(con)
-    calc     <- calcola_budgets(guadagni, budgets_data())
+    calc <- calcola_budgets(guadagni, budgets_data())
     spendibile <- if (nrow(calc) == 0) guadagni else last(calc$residuo_dopo)
     fmt_eur(spendibile)
   })
@@ -224,56 +270,64 @@ server <- function(input, output, session) {
   output$tbl_budget_mese <- renderDT({
     refresh()
 
+    periodo <- periodo_attuale(con)
+    da_str <- format(periodo$da, "%Y-%m-%d")
+
     guadagni <- guadagni_del_mese(con)
-    calc     <- calcola_budgets(guadagni, budgets_data())
+    calc <- calcola_budgets(guadagni, budgets_data())
 
-    anno_c <- year(today())
-    mese_c <- month(today())
-
-    # Spese assegnate a ciascun budget nel mese corrente
-    spese_per_budget <- dbGetQuery(con,
+    # Spese assegnate a ciascun budget dal giorno dello stipendio
+    spese_per_budget <- dbGetQuery(
+      con,
       "SELECT budget_id, SUM(-importo) AS speso
        FROM movimenti
-       WHERE EXTRACT(YEAR  FROM data_valuta) = $1
-         AND EXTRACT(MONTH FROM data_valuta) = $2
+       WHERE data_valuta >= $1::date
          AND importo < 0
          AND NOT ignora
          AND budget_id IS NOT NULL
        GROUP BY budget_id",
-      params = list(anno_c, mese_c)
+      params = list(da_str)
     )
 
-    # Spese correnti (non assegnate)
-    spese_correnti <- dbGetQuery(con,
+    # Spese correnti (non assegnate) dal giorno dello stipendio
+    spese_correnti <- dbGetQuery(
+      con,
       "SELECT COALESCE(SUM(-importo), 0) AS speso
        FROM movimenti
-       WHERE EXTRACT(YEAR  FROM data_valuta) = $1
-         AND EXTRACT(MONTH FROM data_valuta) = $2
+       WHERE data_valuta >= $1::date
          AND importo < 0
          AND NOT ignora
          AND budget_id IS NULL",
-      params = list(anno_c, mese_c)
+      params = list(da_str)
     )$speso
 
-    budget_spendibile <- if (nrow(calc) == 0) guadagni else last(calc$residuo_dopo)
+    budget_spendibile <- if (nrow(calc) == 0) {
+      guadagni
+    } else {
+      last(calc$residuo_dopo)
+    }
 
     # Riga per ogni budget configurato
     righe_budget <- calc |>
       left_join(spese_per_budget, by = c("id" = "budget_id")) |>
       mutate(
-        Tipo      = tipo_label(tipo, valore),
-        Allocato  = importo_calcolato,
-        Speso     = if_else(accantonamento, NA_real_, coalesce(speso, 0)),
-        Disponibile = if_else(accantonamento, NA_real_, importo_calcolato - coalesce(speso, 0))
+        Tipo = tipo_label(tipo, valore),
+        Allocato = importo_calcolato,
+        Speso = if_else(accantonamento, NA_real_, coalesce(speso, 0)),
+        Disponibile = if_else(
+          accantonamento,
+          NA_real_,
+          importo_calcolato - coalesce(speso, 0)
+        )
       ) |>
       select(Budget = nome, Tipo, Allocato, Speso, Disponibile)
 
     # Riga spese correnti
     riga_correnti <- tibble(
-      Budget      = "Spese correnti",
-      Tipo        = "Residuo disponibile",
-      Allocato    = budget_spendibile,
-      Speso       = spese_correnti,
+      Budget = "Spese correnti",
+      Tipo = "Residuo disponibile",
+      Allocato = budget_spendibile,
+      Speso = spese_correnti,
       Disponibile = budget_spendibile - spese_correnti
     )
 
@@ -281,15 +335,18 @@ server <- function(input, output, session) {
 
     datatable(
       df_mese,
-      rownames  = FALSE,
+      rownames = FALSE,
       selection = "none",
-      options   = list(dom = "t", pageLength = 100, ordering = FALSE),
-      class     = "compact stripe"
+      options = list(dom = "t", pageLength = 100, ordering = FALSE),
+      class = "compact stripe"
     ) |>
       formatCurrency(
-        columns  = c("Allocato", "Speso", "Disponibile"),
-        currency = "\u20ac ", before = TRUE, digits = 2,
-        mark = ".", dec.mark = ","
+        columns = c("Allocato", "Speso", "Disponibile"),
+        currency = "\u20ac ",
+        before = TRUE,
+        digits = 2,
+        mark = ".",
+        dec.mark = ","
       ) |>
       formatStyle(
         "Disponibile",
@@ -309,19 +366,22 @@ server <- function(input, output, session) {
 
     budgets_config_data() |>
       mutate(
-        Tipo        = tipo_label(tipo, valore),
+        Tipo = tipo_label(tipo, valore),
         Accantonamento = if_else(accantonamento, "S\u00ec", "No"),
-        Attivo      = if_else(attivo, "S\u00ec", "No")
+        Attivo = if_else(attivo, "S\u00ec", "No")
       ) |>
       select(
-        Ordine = ordine, Nome = nome, Tipo,
-        Accantonamento, Attivo
+        Ordine = ordine,
+        Nome = nome,
+        Tipo,
+        Accantonamento,
+        Attivo
       ) |>
       datatable(
-        rownames  = FALSE,
+        rownames = FALSE,
         selection = "single",
-        options   = list(dom = "t", pageLength = 100, ordering = FALSE),
-        class     = "compact stripe"
+        options = list(dom = "t", pageLength = 100, ordering = FALSE),
+        class = "compact stripe"
       )
   })
 
@@ -329,11 +389,11 @@ server <- function(input, output, session) {
   observeEvent(input$btn_add_budget, {
     budget_editing(NULL)
     showModal(modal_budget_dlg())
-    updateTextInput(session,    "budget_nome",           value = "")
-    updateNumericInput(session, "budget_ordine",         value = 99)
-    updateSelectInput(session,  "budget_tipo",           selected = "fisso")
-    updateNumericInput(session, "budget_valore",         value = 0)
-    updateCheckboxInput(session,"budget_accantonamento", value = FALSE)
+    updateTextInput(session, "budget_nome", value = "")
+    updateNumericInput(session, "budget_ordine", value = 99)
+    updateSelectInput(session, "budget_tipo", selected = "fisso")
+    updateNumericInput(session, "budget_valore", value = 0)
+    updateCheckboxInput(session, "budget_accantonamento", value = FALSE)
   })
 
   # Edit
@@ -343,11 +403,15 @@ server <- function(input, output, session) {
     b <- budgets_config_data()[sel, ]
     budget_editing(b)
     showModal(modal_budget_dlg())
-    updateTextInput(session,    "budget_nome",           value = b$nome)
-    updateNumericInput(session, "budget_ordine",         value = b$ordine)
-    updateSelectInput(session,  "budget_tipo",           selected = b$tipo)
-    updateNumericInput(session, "budget_valore",         value = b$valore)
-    updateCheckboxInput(session,"budget_accantonamento", value = b$accantonamento)
+    updateTextInput(session, "budget_nome", value = b$nome)
+    updateNumericInput(session, "budget_ordine", value = b$ordine)
+    updateSelectInput(session, "budget_tipo", selected = b$tipo)
+    updateNumericInput(session, "budget_valore", value = b$valore)
+    updateCheckboxInput(
+      session,
+      "budget_accantonamento",
+      value = b$accantonamento
+    )
   })
 
   # Delete
@@ -362,24 +426,37 @@ server <- function(input, output, session) {
 
   # Save (insert o update)
   observeEvent(input$btn_salva_budget, {
-    b    <- budget_editing()
+    b <- budget_editing()
     nome <- trimws(input$budget_nome)
     req(nchar(nome) > 0)
 
     if (is.null(b)) {
-      dbExecute(con,
+      dbExecute(
+        con,
         "INSERT INTO budgets (nome, ordine, tipo, valore, accantonamento)
          VALUES ($1, $2, $3, $4, $5)",
-        list(nome, input$budget_ordine, input$budget_tipo,
-             input$budget_valore, input$budget_accantonamento)
+        list(
+          nome,
+          input$budget_ordine,
+          input$budget_tipo,
+          input$budget_valore,
+          input$budget_accantonamento
+        )
       )
     } else {
-      dbExecute(con,
+      dbExecute(
+        con,
         "UPDATE budgets
          SET nome=$1, ordine=$2, tipo=$3, valore=$4, accantonamento=$5
          WHERE id=$6",
-        list(nome, input$budget_ordine, input$budget_tipo,
-             input$budget_valore, input$budget_accantonamento, b$id)
+        list(
+          nome,
+          input$budget_ordine,
+          input$budget_tipo,
+          input$budget_valore,
+          input$budget_accantonamento,
+          b$id
+        )
       )
     }
 
@@ -418,55 +495,77 @@ server <- function(input, output, session) {
       sort(decreasing = TRUE)
 
     scelte <- setNames(mesi_disp, mesi_italiani[as.character(mesi_disp)])
-    sel    <- if (as.integer(input$anno) == year(today())) month(today()) else max(mesi_disp)
+    sel <- if (as.integer(input$anno) == year(today())) {
+      month(today())
+    } else {
+      max(mesi_disp)
+    }
     updateSelectInput(session, "mese", choices = scelte, selected = sel)
   })
 
   output$tbl_movimenti <- renderDT({
-    df      <- movimenti_data()
-    budgets <- budgets_data() |> filter(!accantonamento)  # accantonamenti esclusi dal dropdown
+    df <- movimenti_data()
+    budgets <- budgets_data() |> filter(!accantonamento) # accantonamenti esclusi dal dropdown
     req(df, input$anno, input$mese)
 
     # Costruisce il <select> per l'assegnazione del budget
     build_budget_select <- function(row_id, current_bid) {
       opts <- paste0(
-        sprintf('<option value=""%s>\u2014</option>',
-                if (is.na(current_bid)) " selected" else ""),
+        sprintf(
+          '<option value=""%s>\u2014</option>',
+          if (is.na(current_bid)) " selected" else ""
+        ),
         paste(
-          sprintf('<option value="%d"%s>%s</option>',
-                  budgets$id,
-                  if_else(!is.na(current_bid) & budgets$id == current_bid,
-                          " selected", ""),
-                  budgets$nome),
+          sprintf(
+            '<option value="%d"%s>%s</option>',
+            budgets$id,
+            if_else(
+              !is.na(current_bid) & budgets$id == current_bid,
+              " selected",
+              ""
+            ),
+            budgets$nome
+          ),
           collapse = ""
         )
       )
       sprintf(
         '<select class="budget-sel form-select form-select-sm" data-id="%d" style="min-width:140px">%s</select>',
-        row_id, opts
+        row_id,
+        opts
       )
     }
 
     df |>
       filter(
-        year(data_valuta)  == as.integer(input$anno),
+        year(data_valuta) == as.integer(input$anno),
         month(data_valuta) == as.integer(input$mese)
       ) |>
       mutate(
         ignora = sprintf(
           '<input type="checkbox" class="ignora-cb" data-id="%d" %s>',
-          id, ifelse(ignora, "checked", "")
+          id,
+          ifelse(ignora, "checked", "")
         ),
         budget = pmap_chr(list(id, budget_id), build_budget_select)
       ) |>
-      select(data_valuta, data, movimento, importo, disponibile,
-             osservazioni, budget, ignora) |>
+      select(
+        data_valuta,
+        data,
+        movimento,
+        importo,
+        disponibile,
+        osservazioni,
+        budget,
+        ignora
+      ) |>
       datatable(
-        escape    = FALSE,
+        escape = FALSE,
         selection = "none",
-        rownames  = FALSE,
-        options   = list(pageLength = 25),
-        callback  = JS("
+        rownames = FALSE,
+        options = list(pageLength = 25),
+        callback = JS(
+          "
           table.on('change', '.ignora-cb', function() {
             var id = parseInt($(this).data('id'));
             var checked = $(this).is(':checked');
@@ -478,18 +577,23 @@ server <- function(input, output, session) {
             var budget_id = val === '' ? null : parseInt(val);
             Shiny.setInputValue('assegna_budget', {id: id, budget_id: budget_id}, {priority: 'event'});
           });
-        ")
+        "
+        )
       ) |>
       formatCurrency(
-        columns  = c("importo", "disponibile"),
-        currency = "\u20ac ", before = TRUE,
-        digits = 2, mark = ".", dec.mark = ","
+        columns = c("importo", "disponibile"),
+        currency = "\u20ac ",
+        before = TRUE,
+        digits = 2,
+        mark = ".",
+        dec.mark = ","
       )
   })
 
   observeEvent(input$toggle_ignora, {
     info <- input$toggle_ignora
-    dbExecute(con,
+    dbExecute(
+      con,
       "UPDATE movimenti SET ignora = $1 WHERE id = $2",
       list(info$valore, info$id)
     )
@@ -499,10 +603,17 @@ server <- function(input, output, session) {
   observeEvent(input$assegna_budget, {
     info <- input$assegna_budget
     if (is.null(info$budget_id)) {
-      dbExecute(con, "UPDATE movimenti SET budget_id = NULL WHERE id = $1", list(info$id))
+      dbExecute(
+        con,
+        "UPDATE movimenti SET budget_id = NULL WHERE id = $1",
+        list(info$id)
+      )
     } else {
-      dbExecute(con, "UPDATE movimenti SET budget_id = $1 WHERE id = $2",
-                list(info$budget_id, info$id))
+      dbExecute(
+        con,
+        "UPDATE movimenti SET budget_id = $1 WHERE id = $2",
+        list(info$budget_id, info$id)
+      )
     }
     refresh(refresh() + 1)
   })
