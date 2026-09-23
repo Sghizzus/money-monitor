@@ -186,7 +186,6 @@ def scarica_excel():
                 timezone_id="Europe/Rome",
                 viewport={"width": 1920, "height": 1080},
                 accept_downloads=True,
-                downloads_path=str(Path.cwd()),
             )
             context.set_default_timeout(30_000)
 
