@@ -469,50 +469,42 @@ def scarica_excel():
             # Attendo che la modale sia visibile
             time.sleep(random.uniform(3, 5))
 
-            # Secondo click: bottone "Scarica in Excel" DENTRO la modale.
-            # Cerca l'elemento con coordinate più vicine al centro del viewport
-            # (la modale è centrata, non in fondo alla pagina come il pulsante originale).
+            # Secondo click: avvia il download
             print("[INFO] Avvio download Excel...")
             download_start = time.time()
-
             try:
                 cdp_mouse_click("#downloadTransactionsPDFDocument")
                 print("[INFO] Click su #downloadTransactionsPDFDocument")
             except Exception:
                 pass
 
+            # Monitora ~/Downloads DENTRO il context — il browser rimane aperto
+            # finché il file non appare, evitando che il context chiuso cancelli il download
+            print("[INFO] Attendo completamento download...")
+            new_file = None
+            for _ in range(60):
+                candidates = [
+                    f
+                    for f in downloads_dir.iterdir()
+                    if f.is_file()
+                    and f.stat().st_mtime > download_start
+                    and not f.name.endswith(".crdownload")
+                ]
+                if candidates:
+                    new_file = max(candidates, key=lambda f: f.stat().st_mtime)
+                    time.sleep(2)
+                    break
+                time.sleep(1)
+
     except Exception as e:
         if download_start is None:
-            raise  # errore avvenuto prima del click — rilanciamo
-        # Se siamo arrivati al click, l'event loop chiuso è atteso — procediamo
-        print(
-            f"[INFO] Playwright chiuso (normale dopo il download): {type(e).__name__}"
-        )
-
-    # Aspetta il file FUORI da Playwright — indipendentemente da come è uscito
-    if download_start is None:
-        raise RuntimeError("Script terminato prima del click sul download")
-
-    import shutil
-
-    print("[INFO] Attendo completamento download...")
-    new_file = None
-    for _ in range(60):
-        candidates = [
-            f
-            for f in downloads_dir.iterdir()
-            if f.is_file()
-            and f.stat().st_mtime > download_start
-            and not f.name.endswith(".crdownload")
-        ]
-        if candidates:
-            new_file = max(candidates, key=lambda f: f.stat().st_mtime)
-            time.sleep(3)
-            break
-        time.sleep(1)
+            raise
+        print(f"[INFO] Playwright chiuso: {type(e).__name__}")
 
     if not new_file:
         raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
+
+    import shutil
 
     dest = Path.cwd() / "movimenti.xlsx"
     shutil.copy2(str(new_file), str(dest))
