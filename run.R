@@ -13,6 +13,7 @@ if (length(old_logs) > 0) {
 }
 
 source("R/otp_polling.R")
+source("R/scarica_excel.R")
 source("R/aggiorna_db.R")
 
 con <- dbConnect(
@@ -51,14 +52,7 @@ tryCatch(
 
       tryCatch(
         {
-          exit_code <- system("python R/scarica_excel.py", wait = TRUE)
-          if (exit_code != 0) {
-            stop(
-              "scarica_excel.py terminato con errore (exit code: ",
-              exit_code,
-              ")"
-            )
-          }
+          scarica_excel(con)
           aggiorna_db(con)
           log_info("Aggiornamento completato con successo.")
         },

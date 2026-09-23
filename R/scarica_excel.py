@@ -305,23 +305,25 @@ def scarica_excel():
                     },
                 )
 
-            def cdp_mouse_click(selector, timeout=20):
-                """Trova un elemento via CDP, lo scrolla in vista e fa click fisico."""
-                node_id = cdp_find(selector, timeout)
-                # Scrolla in vista prima di leggere le coordinate
+            def cdp_viewport_click(node_id):
+                """Scrolla l'elemento in vista e clicca usando coordinate VIEWPORT
+                (getBoundingClientRect), non coordinate di pagina (getBoxModel).
+                È la stessa logica di rvest/chromote."""
                 remote = cdp.send("DOM.resolveNode", {"nodeId": node_id})
-                cdp.send(
+                result = cdp.send(
                     "Runtime.callFunctionOn",
                     {
                         "objectId": remote["object"]["objectId"],
-                        "functionDeclaration": "function() { this.scrollIntoView({block:'center', inline:'center'}); }",
+                        "functionDeclaration": """function() {
+                        this.scrollIntoView({block:'center', inline:'center'});
+                        const rect = this.getBoundingClientRect();
+                        return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
+                    }""",
+                        "returnByValue": True,
                     },
                 )
-                time.sleep(0.3)
-                box = cdp.send("DOM.getBoxModel", {"nodeId": node_id})
-                content = box["model"]["content"]
-                cx = (content[0] + content[2] + content[4] + content[6]) / 4
-                cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                coords = result["result"]["value"]
+                cx, cy = coords["x"], coords["y"]
                 for event_type in ["mousePressed", "mouseReleased"]:
                     cdp.send(
                         "Input.dispatchMouseEvent",
@@ -333,6 +335,13 @@ def scarica_excel():
                             "clickCount": 1,
                         },
                     )
+                return cx, cy
+
+            def cdp_mouse_click(selector, timeout=20):
+                """Trova un elemento via CDP e fa click con coordinate viewport."""
+                node_id = cdp_find(selector, timeout)
+                cx, cy = cdp_viewport_click(node_id)
+                print(f"[INFO] cdp_mouse_click '{selector}' @ ({cx:.0f}, {cy:.0f})")
 
             # Step 1: click sulla card del conto
             cdp_mouse_click(
@@ -407,21 +416,24 @@ def scarica_excel():
                 for nid in node_ids:
                     try:
                         remote = cdp.send("DOM.resolveNode", {"nodeId": nid})
-                        obj_id = remote["object"]["objectId"]
-                        cdp.send(
+                        result = cdp.send(
                             "Runtime.callFunctionOn",
                             {
-                                "objectId": obj_id,
-                                "functionDeclaration": "function() { let el = this; if (el.nodeType === 3) el = el.parentElement; if (el) el.scrollIntoView({block:'center', inline:'center'}); }",
+                                "objectId": remote["object"]["objectId"],
+                                "functionDeclaration": """function() {
+                                let el = this;
+                                if (el.nodeType === 3) el = el.parentElement;
+                                if (!el) return null;
+                                el.scrollIntoView({block:'center', inline:'center'});
+                                const rect = el.getBoundingClientRect();
+                                return {x: rect.left + rect.width/2, y: rect.top + rect.height/2};
+                            }""",
+                                "returnByValue": True,
                             },
                         )
-                        time.sleep(0.3)
-                        # Dopo scrollIntoView legge le coordinate aggiornate e fa click fisico
-                        box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
-                        content = box["model"]["content"]
-                        cx = (content[0] + content[2] + content[4] + content[6]) / 4
-                        cy = (content[1] + content[3] + content[5] + content[7]) / 4
-                        if cx > 0 and cy > 0:
+                        coords = result["result"].get("value")
+                        if coords and coords["x"] > 0 and 0 < coords["y"] < 1080:
+                            cx, cy = coords["x"], coords["y"]
                             for evt in ["mousePressed", "mouseReleased"]:
                                 cdp.send(
                                     "Input.dispatchMouseEvent",
@@ -433,9 +445,7 @@ def scarica_excel():
                                         "clickCount": 1,
                                     },
                                 )
-                            print(
-                                f"[INFO] Cliccato '{query}' alle coordinate ({cx:.0f}, {cy:.0f})"
-                            )
+                            print(f"[INFO] Cliccato '{query}' @ ({cx:.0f}, {cy:.0f})")
                             cdp.send(
                                 "DOM.discardSearchResults", {"searchId": s["searchId"]}
                             )
