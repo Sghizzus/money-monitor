@@ -490,15 +490,23 @@ def scarica_excel():
             print("[INFO] Avvio download Excel...")
             download_start = time.time()
             try:
-                cdp_mouse_click("#downloadTransactionsPDFDocument")
-                print("[INFO] Click su #downloadTransactionsPDFDocument")
+                cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
+                print(
+                    "[INFO] Click su #downloadTransactionsPDFDocument > haunted-button"
+                )
             except Exception:
                 pass
 
             # Aspetta dentro il context (browser aperto = download non cancellato)
+            # Controlla sia il flag on_download che la presenza fisica del file
             print("[INFO] Attendo completamento download...")
             for _ in range(60):
                 if download_done[0]:
+                    break
+                # Fallback: controlla se il file è apparso in cwd (downloads_path)
+                if dest.exists() and dest.stat().st_mtime > download_start:
+                    download_done[0] = True
+                    new_file = dest
                     break
                 time.sleep(1)
             new_file = dest if download_done[0] else None
