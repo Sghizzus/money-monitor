@@ -307,9 +307,8 @@ def scarica_excel():
                 )
 
             def cdp_viewport_click(node_id):
-                """Scrolla l'elemento in vista e clicca usando coordinate VIEWPORT
-                (getBoundingClientRect), non coordinate di pagina (getBoxModel).
-                È la stessa logica di rvest/chromote."""
+                """Scrolla l'elemento in vista, ottiene coordinate viewport
+                e usa page.mouse.click() che è più trusted di Input.dispatchMouseEvent."""
                 remote = cdp.send("DOM.resolveNode", {"nodeId": node_id})
                 result = cdp.send(
                     "Runtime.callFunctionOn",
@@ -325,17 +324,9 @@ def scarica_excel():
                 )
                 coords = result["result"]["value"]
                 cx, cy = coords["x"], coords["y"]
-                for event_type in ["mousePressed", "mouseReleased"]:
-                    cdp.send(
-                        "Input.dispatchMouseEvent",
-                        {
-                            "type": event_type,
-                            "x": cx,
-                            "y": cy,
-                            "button": "left",
-                            "clickCount": 1,
-                        },
-                    )
+                # page.mouse.click() è più trusted di Input.dispatchMouseEvent —
+                # esegue move + down + up e i browser lo accettano per download
+                page.mouse.click(cx, cy)
                 return cx, cy
 
             def cdp_mouse_click(selector, timeout=20):
