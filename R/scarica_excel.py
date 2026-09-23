@@ -450,16 +450,69 @@ def scarica_excel():
             # Attendo che la modale sia visibile
             time.sleep(random.uniform(3, 5))
 
-            # Secondo click: bottone "Scarica in Excel" DENTRO la modale (last=True)
-            # Usiamo page.on("download") invece di expect_download perché
-            # BBVA chiude il browser appena parte il download, prima che
-            # expect_download possa completare save_as.
+            # Secondo click: bottone "Scarica in Excel" DENTRO la modale.
+            # Cerca l'elemento con coordinate più vicine al centro del viewport
+            # (la modale è centrata, non in fondo alla pagina come il pulsante originale).
             print("[INFO] Avvio download Excel...")
             download_start = time.time()
 
-            # Clicca e ignora qualsiasi errore dovuto alla chiusura del browser
             try:
-                cdp_search_click("Scarica in Excel", last=True)
+                s2 = cdp.send(
+                    "DOM.performSearch",
+                    {"query": "Scarica in Excel", "includeUserAgentShadowDOM": True},
+                )
+                ns2 = cdp.send(
+                    "DOM.getSearchResults",
+                    {
+                        "searchId": s2["searchId"],
+                        "fromIndex": 0,
+                        "toIndex": s2["resultCount"],
+                    },
+                )
+                best_nid, best_dist = None, float("inf")
+                for nid in ns2["nodeIds"]:
+                    try:
+                        remote = cdp.send("DOM.resolveNode", {"nodeId": nid})
+                        obj_id = remote["object"]["objectId"]
+                        cdp.send(
+                            "Runtime.callFunctionOn",
+                            {
+                                "objectId": obj_id,
+                                "functionDeclaration": "function() { let el = this; if (el.nodeType === 3) el = el.parentElement; if (el) el.scrollIntoView({block:'center', inline:'center'}); }",
+                            },
+                        )
+                        time.sleep(0.2)
+                        box = cdp.send("DOM.getBoxModel", {"nodeId": nid})
+                        content = box["model"]["content"]
+                        cx = (content[0] + content[2] + content[4] + content[6]) / 4
+                        cy = (content[1] + content[3] + content[5] + content[7]) / 4
+                        dist = abs(cx - 960) + abs(
+                            cy - 540
+                        )  # distanza dal centro 1920x1080
+                        if (
+                            0 < cy < 900 and dist < best_dist
+                        ):  # esclude elementi fuori viewport
+                            best_dist = dist
+                            best_nid = nid
+                            best_cx, best_cy = cx, cy
+                    except Exception:
+                        continue
+                cdp.send("DOM.discardSearchResults", {"searchId": s2["searchId"]})
+                if best_nid:
+                    print(
+                        f"[INFO] Click modale download alle coordinate ({best_cx:.0f}, {best_cy:.0f})"
+                    )
+                    for evt in ["mousePressed", "mouseReleased"]:
+                        cdp.send(
+                            "Input.dispatchMouseEvent",
+                            {
+                                "type": evt,
+                                "x": best_cx,
+                                "y": best_cy,
+                                "button": "left",
+                                "clickCount": 1,
+                            },
+                        )
             except Exception:
                 pass
 
