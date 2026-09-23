@@ -185,7 +185,8 @@ def scarica_excel():
                 locale="it-IT",
                 timezone_id="Europe/Rome",
                 viewport={"width": 1920, "height": 1080},
-                accept_downloads=False,
+                accept_downloads=True,
+                downloads_path=str(Path.cwd()),
             )
             context.set_default_timeout(30_000)
 
@@ -469,6 +470,22 @@ def scarica_excel():
             # Attendo che la modale sia visibile
             time.sleep(random.uniform(3, 5))
 
+            # Handler download registrato su TUTTE le pagine del context
+            # (BBVA apre il download su una nuova tab web.bbva.it)
+            dest = Path.cwd() / "movimenti.xlsx"
+            download_done = [False]
+
+            def on_download(download):
+                try:
+                    download.save_as(str(dest))
+                    download_done[0] = True
+                    print(f"[INFO] Download salvato: {dest.name}")
+                except Exception as e:
+                    print(f"[WARN] Errore salvataggio: {e}")
+
+            page.on("download", on_download)
+            context.on("page", lambda p: p.on("download", on_download))
+
             # Secondo click: avvia il download
             print("[INFO] Avvio download Excel...")
             download_start = time.time()
@@ -478,39 +495,25 @@ def scarica_excel():
             except Exception:
                 pass
 
-            # Monitora ~/Downloads DENTRO il context — il browser rimane aperto
-            # finché il file non appare, evitando che il context chiuso cancelli il download
+            # Aspetta dentro il context (browser aperto = download non cancellato)
             print("[INFO] Attendo completamento download...")
-            new_file = None
             for _ in range(60):
-                candidates = [
-                    f
-                    for f in downloads_dir.iterdir()
-                    if f.is_file()
-                    and f.stat().st_mtime > download_start
-                    and not f.name.endswith(".crdownload")
-                ]
-                if candidates:
-                    new_file = max(candidates, key=lambda f: f.stat().st_mtime)
-                    time.sleep(2)
+                if download_done[0]:
                     break
                 time.sleep(1)
+            new_file = dest if download_done[0] else None
 
     except Exception as e:
         if download_start is None:
             raise
         print(f"[INFO] Playwright chiuso: {type(e).__name__}")
 
-    if not new_file:
+    if not new_file or not new_file.exists():
         raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
 
-    import shutil
-
-    dest = Path.cwd() / "movimenti.xlsx"
-    shutil.copy2(str(new_file), str(dest))
-    print(f"[INFO] Excel scaricato con successo: {dest.name}")
+    print(f"[INFO] Excel scaricato con successo: {new_file.name}")
     conn.close()
-    return str(dest)
+    return str(new_file)
 
 
 # ---------------------------------------------------------------------------
