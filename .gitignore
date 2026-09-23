@@ -6,3 +6,5 @@
 .Renviron
 .vscode/settings.json
 logs/*.log
+__pycache__/
+*.pyc
