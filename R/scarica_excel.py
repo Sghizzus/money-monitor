@@ -511,19 +511,41 @@ def scarica_excel():
             except Exception:
                 pass
 
-            # Aspetta dentro il context (browser aperto = download non cancellato)
-            # Controlla sia il flag on_download che la presenza fisica del file
+            # Attende il download — controlla handler e qualsiasi file nuovo in cwd
             print("[INFO] Attendo completamento download...")
+            cwd = Path.cwd()
+            IGNORE_EXT = {
+                ".py",
+                ".R",
+                ".bat",
+                ".lock",
+                ".json",
+                ".md",
+                ".txt",
+                ".log",
+                ".sql",
+                ".Rproj",
+            }
+            new_file = None
             for _ in range(60):
                 if download_done[0]:
-                    break
-                # Fallback: controlla se il file è apparso in cwd (downloads_path)
-                if dest.exists() and dest.stat().st_mtime > download_start:
-                    download_done[0] = True
                     new_file = dest
                     break
+                # Playwright salva con UUID in cwd (downloads_path) — cerca qualsiasi file nuovo
+                candidates = [
+                    f
+                    for f in cwd.iterdir()
+                    if f.is_file()
+                    and f.stat().st_mtime > download_start
+                    and f.suffix not in IGNORE_EXT
+                    and not f.name.startswith(".")
+                ]
+                if candidates:
+                    new_file = max(candidates, key=lambda f: f.stat().st_mtime)
+                    print(f"[INFO] File trovato: {new_file.name}")
+                    time.sleep(2)
+                    break
                 time.sleep(1)
-            new_file = dest if download_done[0] else None
 
     except Exception as e:
         if download_start is None:
@@ -533,9 +555,17 @@ def scarica_excel():
     if not new_file or not new_file.exists():
         raise RuntimeError("Timeout: nessun file scaricato entro 60 secondi")
 
-    print(f"[INFO] Excel scaricato con successo: {new_file.name}")
+    # Rinomina in movimenti.xlsx se ha un nome UUID o un'estensione diversa
+    dest = Path.cwd() / "movimenti.xlsx"
+    if new_file != dest:
+        import shutil
+
+        shutil.copy2(str(new_file), str(dest))
+        new_file.unlink(missing_ok=True)
+
+    print(f"[INFO] Excel scaricato con successo: {dest.name}")
     conn.close()
-    return str(new_file)
+    return str(dest)
 
 
 # ---------------------------------------------------------------------------
