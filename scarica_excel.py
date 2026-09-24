@@ -513,7 +513,46 @@ def scarica_excel():
                 cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
 
             # Aspetta che il callback completi (max 60s)
-            download_event.wait(timeout=60)
+            # Se save_as fallisce, il file finisce in ~/Downloads — monitora entrambe le cartelle
+            cwd = Path.cwd()
+            downloads_dir = Path.home() / "Downloads"
+            IGNORE_EXT = {
+                ".py",
+                ".R",
+                ".bat",
+                ".lock",
+                ".json",
+                ".md",
+                ".txt",
+                ".log",
+                ".sql",
+                ".Rproj",
+                ".gitignore",
+            }
+            for _ in range(60):
+                if download_event.is_set() and new_file and new_file.exists():
+                    break
+                # Fallback: cerca in ~/Downloads
+                candidates = [
+                    f
+                    for f in downloads_dir.iterdir()
+                    if f.is_file()
+                    and f.stat().st_mtime > download_start
+                    and f.suffix not in IGNORE_EXT
+                    and not f.name.endswith(".crdownload")
+                ]
+                if candidates:
+                    found = max(candidates, key=lambda f: f.stat().st_mtime)
+                    import shutil
+
+                    new_file = cwd / "movimenti.xlsx"
+                    shutil.copy2(str(found), str(new_file))
+                    print(
+                        f"[INFO] File trovato in Downloads: {found.name} → movimenti.xlsx"
+                    )
+                    break
+                time.sleep(1)
+
             if not new_file:
                 print("[WARN] Download non completato via callback")
 
