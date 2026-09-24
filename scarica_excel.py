@@ -461,22 +461,37 @@ def scarica_excel():
             time.sleep(random.uniform(3, 5))
 
             # Secondo click: avvia il download.
-            # expect_download pre-registra l'attesa PRIMA del click —
-            # con launch_persistent_context il context rimane aperto
-            # anche dopo la chiusura della pagina, quindi save_as funziona.
+            # Usiamo un callback asincrono registrato PRIMA del click su tutte le pagine.
+            # Il callback salva il file nel momento in cui il download inizia,
+            # indipendentemente dalla chiusura della pagina.
+            import threading
+
             print("[INFO] Avvio download Excel...")
             download_start = time.time()
             dest = Path.cwd() / "movimenti.xlsx"
+            download_event = threading.Event()
+            new_file = None
 
-            try:
-                with page.expect_download(timeout=60_000) as dl:
-                    cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
-                dl.value.save_as(str(dest))
-                print(f"[INFO] Download salvato: {dest.name}")
-                new_file = dest
-            except Exception as e:
-                print(f"[WARN] expect_download fallito: {e}")
-                new_file = None
+            def on_download(download):
+                nonlocal new_file
+                try:
+                    download.save_as(str(dest))
+                    new_file = dest
+                    print(f"[INFO] Download salvato: {dest.name}")
+                except Exception as e:
+                    print(f"[WARN] Errore salvataggio: {e}")
+                finally:
+                    download_event.set()
+
+            page.on("download", on_download)
+            context.on("page", lambda p: p.on("download", on_download))
+
+            cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
+
+            # Aspetta che il callback completi (max 60s)
+            download_event.wait(timeout=60)
+            if not new_file:
+                print("[WARN] Download non completato via callback")
 
     except Exception as e:
         if download_start is None:
