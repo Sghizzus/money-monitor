@@ -486,7 +486,31 @@ def scarica_excel():
             page.on("download", on_download)
             context.on("page", lambda p: p.on("download", on_download))
 
-            cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
+            # Legge la posizione SENZA scrollIntoView per non rompere la modale
+            try:
+                nid2 = cdp_find(
+                    "#downloadTransactionsPDFDocument > haunted-button", timeout=5
+                )
+                remote2 = cdp.send("DOM.resolveNode", {"nodeId": nid2})
+                rect2 = cdp.send(
+                    "Runtime.callFunctionOn",
+                    {
+                        "objectId": remote2["object"]["objectId"],
+                        "functionDeclaration": "function() { const r = this.getBoundingClientRect(); return {x: r.left + r.width/2, y: r.top + r.height/2, w: r.width, h: r.height}; }",
+                        "returnByValue": True,
+                    },
+                )
+                pos = rect2["result"]["value"]
+                print(f"[DEBUG] Pulsante download senza scroll: {pos}")
+                if pos and 0 < pos["y"] < 1080 and pos["w"] > 0:
+                    page.mouse.click(pos["x"], pos["y"])
+                    print(f"[INFO] Click download @ ({pos['x']:.0f}, {pos['y']:.0f})")
+                else:
+                    # Fallback: prova con scroll
+                    cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
+            except Exception as e:
+                print(f"[WARN] {e}")
+                cdp_mouse_click("#downloadTransactionsPDFDocument > haunted-button")
 
             # Aspetta che il callback completi (max 60s)
             download_event.wait(timeout=60)
