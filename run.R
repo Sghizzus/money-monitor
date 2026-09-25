@@ -12,6 +12,8 @@ if (length(old_logs) > 0) {
   file.remove(old_logs)
 }
 
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
 source("R/otp_polling.R")
 source("R/aggiorna_db.R")
 
@@ -51,8 +53,16 @@ tryCatch(
 
       tryCatch(
         {
-          exit_code <- system("python scarica_excel.py", wait = TRUE)
-          if (exit_code != 0) {
+          py_output <- system2(
+            "python",
+            "scarica_excel.py",
+            stdout = TRUE,
+            stderr = TRUE,
+            wait = TRUE
+          )
+          log_info("Output Python:\n{paste(py_output, collapse = '\n')}")
+          exit_code <- attr(py_output, "status") %||% 0L
+          if (!is.null(exit_code) && exit_code != 0) {
             stop("scarica_excel.py fallito (exit code: ", exit_code, ")")
           }
           aggiorna_db(con)
