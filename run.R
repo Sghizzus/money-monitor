@@ -54,7 +54,7 @@ tryCatch(
       tryCatch(
         {
           py_output <- system2(
-            "python",
+            ".venv/Scripts/python.exe",
             "scarica_excel.py",
             stdout = TRUE,
             stderr = TRUE,
