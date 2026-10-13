@@ -21,6 +21,8 @@ JOB_NAME="money-monitor-job"
 DB_PWD="${DB_PWD}"
 BBVA_USER="${BBVA_USER}"
 BBVA_PASSWORD="${BBVA_PASSWORD}"
+BBVA_CUSTOMER_ID="${BBVA_CUSTOMER_ID}"
+BBVA_ACCOUNT_ID="${BBVA_ACCOUNT_ID}"
 
 # --- 1. Resource Group (già esistente, idempotente) ---
 echo ">>> Resource group..."
@@ -52,7 +54,7 @@ az containerapp env create \
 # --- 5. Container App Job (cron ogni 15 minuti) ---
 echo ">>> Creo il Container App Job..."
 
-ACR_SERVER="${ACR_NAME}.azurecr.io"
+ACR_SERVER=$(az acr show --name "$ACR_NAME" --query "loginServer" -o tsv)
 az acr update -n "$ACR_NAME" --admin-enabled true
 ACR_PASSWORD=$(az acr credential show --name "$ACR_NAME" --query "passwords[0].value" -o tsv)
 
@@ -74,10 +76,14 @@ az containerapp job create \
       "db-pwd=${DB_PWD}" \
       "bbva-user=${BBVA_USER}" \
       "bbva-password=${BBVA_PASSWORD}" \
+      "bbva-customer-id=${BBVA_CUSTOMER_ID}" \
+      "bbva-account-id=${BBVA_ACCOUNT_ID}" \
   --env-vars \
       "DB_PWD=secretref:db-pwd" \
       "BBVA_USER=secretref:bbva-user" \
-      "BBVA_PASSWORD=secretref:bbva-password"
+      "BBVA_PASSWORD=secretref:bbva-password" \
+      "BBVA_CUSTOMER_ID=secretref:bbva-customer-id" \
+      "BBVA_ACCOUNT_ID=secretref:bbva-account-id"
 
 echo ">>> Deploy completato."
 echo "    Job: $JOB_NAME"

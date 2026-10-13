@@ -35,9 +35,6 @@ RUN apt-get update && apt-get install -y software-properties-common \
 # Indica a chromote dove trovare Chrome
 ENV CHROMOTE_CHROME=/usr/bin/chromium
 
-# Crea la cartella Downloads (usata come destinazione temporanea del file Excel)
-RUN mkdir -p /root/Downloads
-
 # initialize application project directory
 WORKDIR /project
 RUN mkdir -p renv
