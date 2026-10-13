@@ -8,3 +8,7 @@
 logs/*.log
 __pycache__/
 *.pyc
+
+# File di lavoro locale con dati sensibili
+*.har
+appunti.R
