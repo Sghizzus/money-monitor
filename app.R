@@ -99,6 +99,7 @@ dashboard_ui <- tagList(
     value_box(
       title = textOutput("guadagni_label"),
       value = textOutput("guadagni"),
+      uiOutput("guadagni_disclaimer"),
       theme = "success",
       showcase = bs_icon("graph-up-arrow")
     ),
@@ -236,20 +237,33 @@ server <- function(input, output, session) {
 
   # ---- Dashboard ----
 
-  output$guadagni_label <- renderText({
+  guadagni_rv <- reactive({
     refresh()
+    guadagni_info(con)
+  })
+
+  output$guadagni_label <- renderText({
     p <- periodo_attuale(con)
     paste0("Guadagni dal ", format(p$da, "%d/%m"))
   })
 
   output$guadagni <- renderText({
-    refresh()
-    fmt_eur(guadagni_del_mese(con))
+    fmt_eur(guadagni_rv()$valore)
+  })
+
+  output$guadagni_disclaimer <- renderUI({
+    if (guadagni_rv()$stimato) {
+      p(
+        class = "mb-0 opacity-75",
+        style = "font-size: 0.8rem;",
+        bs_icon("exclamation-triangle-fill"),
+        "Stima da media ultimi 3 mesi"
+      )
+    }
   })
 
   output$budget_spendibile <- renderText({
-    refresh()
-    guadagni <- guadagni_del_mese(con)
+    guadagni <- guadagni_rv()$valore
     calc <- calcola_budgets(guadagni, budgets_data())
     spendibile <- if (nrow(calc) == 0) guadagni else last(calc$residuo_dopo)
     fmt_eur(spendibile)
@@ -273,7 +287,7 @@ server <- function(input, output, session) {
     periodo <- periodo_attuale(con)
     da_str <- format(periodo$da, "%Y-%m-%d")
 
-    guadagni <- guadagni_del_mese(con)
+    guadagni <- guadagni_rv()$valore
     calc <- calcola_budgets(guadagni, budgets_data())
 
     # Spese assegnate a ciascun budget dal giorno dello stipendio
