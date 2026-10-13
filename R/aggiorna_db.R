@@ -38,32 +38,14 @@ library(logger)
 #'
 #' @seealso [db_connect()] per la connessione al database
 
-aggiorna_db <- function(con) {
-  file <- list.files(pattern = "\\.xlsx$")
-
-  if (length(file) == 0) {
-    log_warn("Nessun file .xlsx trovato nella directory corrente")
-    return(invisible(FALSE))
+aggiorna_db <- function(con, transactions = NULL) {
+  if (!is.null(transactions)) {
+    data <- parse_transactions_json(transactions)
+    log_info("Ricevute {nrow(data)} transazioni via API JSON.")
+  } else {
+    data <- leggi_excel()
+    if (is.null(data)) return(invisible(FALSE))
   }
-
-  if (length(file) > 1) {
-    log_warn("Trovati {length(file)} file. Uso il primo: {file[1]}")
-    file <- file[1]
-  }
-
-  log_info("Individuato file {file}")
-
-  data <- read_excel(file, skip = 3) |>
-    clean_names() |>
-    mutate(across(data_valuta:data, dmy)) |>
-    rename(
-      valuta_movimento = valuta_6,
-      valuta_saldo = valuta_8
-    )
-
-  log_info("Caricato file in memoria. Tento la connessione al db.")
-
-  log_info("Connessione avvenuta con successo")
 
   dati_attuali <- tbl(con, "movimenti") |> collect()
 
@@ -78,8 +60,46 @@ aggiorna_db <- function(con) {
     log_info("Caricati i nuovi dati nel db")
   }
 
-  file.remove(file)
-  log_info("Rimosso il file di importazione. Task terminato")
-
   invisible(TRUE)
+}
+
+# Converte la lista di transazioni restituita dall'API JSON in un dataframe
+# compatibile con la tabella `movimenti`
+parse_transactions_json <- function(transactions) {
+  purrr::map(transactions, \(t) {
+    tibble(
+      data_valuta = as.Date(substr(t$valueDate, 1, 10)),
+      data = as.Date(substr(t$transactionDate, 1, 10)),
+      movimento = t$name %||% NA_character_,
+      importo = t$amount$amount %||% NA_real_,
+      disponibile = t$balance$accountingBalance$amount %||% NA_real_,
+      osservazioni = NA_character_
+    )
+  }) |>
+    purrr::list_rbind()
+}
+
+# Legge il file Excel dalla directory corrente (flusso legacy)
+leggi_excel <- function() {
+  file <- list.files(pattern = "\\.xlsx$")
+
+  if (length(file) == 0) {
+    log_warn("Nessun file .xlsx trovato nella directory corrente")
+    return(NULL)
+  }
+  if (length(file) > 1) {
+    log_warn("Trovati {length(file)} file. Uso il primo: {file[1]}")
+    file <- file[1]
+  }
+
+  log_info("Individuato file {file}")
+
+  data <- read_excel(file, skip = 3) |>
+    clean_names() |>
+    mutate(across(data_valuta:data, dmy)) |>
+    rename(valuta_movimento = valuta_6, valuta_saldo = valuta_8)
+
+  file.remove(file)
+  log_info("File rimosso dopo la lettura.")
+  data
 }

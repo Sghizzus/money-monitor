@@ -16,6 +16,7 @@ if (length(old_logs) > 0) {
 
 source("R/otp_polling.R")
 source("R/aggiorna_db.R")
+source("R/scarica_excel_httr2.R")
 
 con <- dbConnect(
   Postgres(),
@@ -53,19 +54,9 @@ tryCatch(
 
       tryCatch(
         {
-          py_output <- system2(
-            ".venv/Scripts/python.exe",
-            "scarica_excel.py",
-            stdout = TRUE,
-            stderr = TRUE,
-            wait = TRUE
-          )
-          log_info("Output Python:\n{paste(py_output, collapse = '\n')}")
-          exit_code <- attr(py_output, "status") %||% 0L
-          if (!is.null(exit_code) && exit_code != 0) {
-            stop("scarica_excel.py fallito (exit code: ", exit_code, ")")
-          }
-          aggiorna_db(con)
+          res <- scarica_excel_httr2(con)
+          aggiorna_db(con, transactions = res$transactions)
+          dbExecute(con, "UPDATE scheduler SET last_run = NOW() WHERE id = 1")
           log_info("Aggiornamento completato con successo.")
         },
         error = function(e) {
