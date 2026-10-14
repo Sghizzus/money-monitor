@@ -1966,6 +1966,44 @@
         "RemoteSha": "1.4.8"
       }
     },
+    "httr2": {
+      "Source": "P3M",
+      "Repository": "https://packagemanager.posit.co/cran/latest",
+      "description": {
+        "Package": "httr2",
+        "Title": "Perform HTTP Requests and Process the Responses",
+        "Version": "1.3.0",
+        "Authors@R": "c(\n    person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = c(\"aut\", \"cre\")),\n    person(\"Posit Software, PBC\", role = c(\"cph\", \"fnd\")),\n    person(\"Maximilian\", \"Girlich\", role = \"ctb\")\n  )",
+        "Description": "Tools for creating and modifying HTTP requests, then\n    performing them and processing the results. 'httr2' is a modern\n    re-imagining of 'httr' that uses a pipe-based interface and solves\n    more of the problems that API wrapping packages face.",
+        "License": "MIT + file LICENSE",
+        "URL": "https://httr2.r-lib.org, https://github.com/r-lib/httr2",
+        "BugReports": "https://github.com/r-lib/httr2/issues",
+        "Depends": "R (>= 4.1)",
+        "Imports": "cli (>= 3.0.0), curl (>= 6.4.0), glue, lifecycle, magrittr,\nopenssl, R6, rlang (>= 1.3.0), vctrs (>= 0.6.3), withr",
+        "Suggests": "askpass, bench, clipr, covr, digest, docopt, httpuv, jose,\njsonlite, knitr, later (>= 1.4.0), nanonext, otel (>= 0.2.0),\notelsdk (>= 0.2.0), paws.common (>= 0.8.0), promises, rappdirs,\nrmarkdown, testthat (>= 3.1.8), tibble, webfakes (>= 1.4.0),\nxml2",
+        "VignetteBuilder": "knitr",
+        "Config/Needs/website": "tidyverse/tidytemplate",
+        "Config/roxygen2/version": "8.0.0",
+        "Config/testthat/edition": "3",
+        "Config/testthat/parallel": "true",
+        "Config/testthat/start-first": "resp-stream, req-perform",
+        "Encoding": "UTF-8",
+        "NeedsCompilation": "no",
+        "Packaged": "2026-07-13 19:55:02 UTC; hadleywickham",
+        "Author": "Hadley Wickham [aut, cre],\n  Posit Software, PBC [cph, fnd],\n  Maximilian Girlich [ctb]",
+        "Maintainer": "Hadley Wickham <hadley@posit.co>",
+        "Repository": "RSPM",
+        "Date/Publication": "2026-07-13 21:50:06 UTC",
+        "Built": "R 4.6.0; ; 2026-07-14 05:33:33 UTC; windows",
+        "RemoteType": "standard",
+        "RemoteRef": "httr2",
+        "RemotePkgRef": "httr2",
+        "RemoteRepos": "https://packagemanager.posit.co/cran/latest",
+        "RemoteReposName": "P3M",
+        "RemotePkgPlatform": "x86_64-w64-mingw32",
+        "RemoteSha": "1.3.0"
+      }
+    },
     "ids": {
       "Source": "P3M",
       "Repository": "https://packagemanager.posit.co/cran/latest",
@@ -4510,26 +4548,32 @@
     ".dockerignore": {
       "checksum": "fea33ba158cd4e789ff387277351b3dc"
     },
-    ".github/workflows/docker-build.yml": {
-      "checksum": "fb6045fdf9cbe94cc6b144cef6461756"
+    ".github/workflows/deploy.yml": {
+      "checksum": "dce5ef27fb2a7e623c9530a9631bd9d5"
     },
     ".Renviron": {
-      "checksum": "d4925b24f82e7dfd33d4076f0c7685c7"
+      "checksum": "1c113563a8c77fa0aeeecd7bbc6afe2e"
     },
     ".Rprofile": {
-      "checksum": "10982974e099308d2c35a7cd0ac49e8d"
+      "checksum": "8538a5b5cdf43efad31c4597b79b0cdd"
     },
     ".vscode/settings.json": {
       "checksum": "9c902fbf96f638d0ebb32971cca47d3f"
     },
+    "__pycache__/scarica_excel.cpython-314.pyc": {
+      "checksum": "5bb78909315aa8e2a65701c3ffd67056"
+    },
     "app.R": {
-      "checksum": "30a1946aa0a286b6d1cb795350fb5ee1"
+      "checksum": "5828ec5a1e6b2798621126ef832799df"
+    },
+    "appunti.R": {
+      "checksum": "e377a23be4bb7878db88b03b3ae5607d"
     },
     "azure-setup.sh": {
-      "checksum": "4be8e7a5bbdf3af74dcc63527c118b0f"
+      "checksum": "51a839d0ce1d6ff2c13aa7a822c11b81"
     },
     "Dockerfile": {
-      "checksum": "eb7a40e1304b7617338b08e7759b842b"
+      "checksum": "e72913443f485a4c4755129e663b5e8f"
     },
     "docs/env-variables.md": {
       "checksum": "cf03bfabe49db60165411e2e660c2dfd"
@@ -4537,14 +4581,101 @@
     "docs/tasker-setup.md": {
       "checksum": "368b738e1f89fa624881a716bb852f24"
     },
+    "login.har": {
+      "checksum": "2a944fba490b832b97ef840edec9c197"
+    },
+    "logs/.gitkeep": {
+      "checksum": "68b329da9893e34099c7d8ad5cb9c940"
+    },
+    "logs/money-monitor-2026-09-16.log": {
+      "checksum": "ebb661ad7f354c882db9250091c91fd0"
+    },
+    "logs/money-monitor-2026-09-17.log": {
+      "checksum": "8d680d69a60ae27b5ee1388b8bcdb2d1"
+    },
+    "logs/money-monitor-2026-09-18.log": {
+      "checksum": "062359c2d15009a55a590f1701fddba2"
+    },
+    "logs/money-monitor-2026-09-19.log": {
+      "checksum": "68918d55795b0646f3fc2588603c6071"
+    },
+    "logs/money-monitor-2026-09-20.log": {
+      "checksum": "86884177c1209bcd51f84f54f20de943"
+    },
+    "logs/money-monitor-2026-09-21.log": {
+      "checksum": "5f9dda7fea062b0f9433b91e01469f57"
+    },
+    "logs/money-monitor-2026-09-22.log": {
+      "checksum": "b9aaf4c468d78d48791d513cc3e1b4f8"
+    },
+    "logs/money-monitor-2026-09-23.log": {
+      "checksum": "88ede8c7541f672e60ad323e273d7e3f"
+    },
+    "logs/money-monitor-2026-09-24.log": {
+      "checksum": "39fb91ec531e40097841463030b4e33d"
+    },
+    "logs/money-monitor-2026-09-25.log": {
+      "checksum": "f45cc51aa477333b886c65cb4914b264"
+    },
+    "logs/money-monitor-2026-09-26.log": {
+      "checksum": "e74644d1d97ff6e2fe97fe09d6f85367"
+    },
+    "logs/money-monitor-2026-09-27.log": {
+      "checksum": "72f9e2f95864ecac0bb43dfb941d687b"
+    },
+    "logs/money-monitor-2026-09-28.log": {
+      "checksum": "a580d75aa937aacbf223c18da6cce62d"
+    },
+    "logs/money-monitor-2026-09-29.log": {
+      "checksum": "f0f3c26b7ae14d5328daf23c75a73941"
+    },
+    "logs/money-monitor-2026-09-30.log": {
+      "checksum": "7ba8fbd2207c6fba137a0c2e71e7bb73"
+    },
+    "logs/money-monitor-2026-10-01.log": {
+      "checksum": "ec003142447ec4200a92028bbd3d9674"
+    },
+    "logs/money-monitor-2026-10-03.log": {
+      "checksum": "543bb4c4c1901f253799f3b74f71af46"
+    },
+    "logs/money-monitor-2026-10-04.log": {
+      "checksum": "44c6785aa211e6bdc11703a1ff1ab092"
+    },
+    "logs/money-monitor-2026-10-05.log": {
+      "checksum": "bc030191a00b8764e9cb9c0ad937b169"
+    },
+    "logs/money-monitor-2026-10-06.log": {
+      "checksum": "7cde6f9a2cf32f16cc152a6faeeabd7b"
+    },
+    "logs/money-monitor-2026-10-07.log": {
+      "checksum": "c753fc471fee2d4e5212f58602b75989"
+    },
+    "logs/money-monitor-2026-10-08.log": {
+      "checksum": "7cf80f19df3522fdf424f8bd3e4c2dcd"
+    },
+    "logs/money-monitor-2026-10-09.log": {
+      "checksum": "a871e1d5d96d64703fe9104211e258f4"
+    },
+    "logs/money-monitor-2026-10-10.log": {
+      "checksum": "3ce166d7b55e05291066caee423bd92a"
+    },
+    "logs/money-monitor-2026-10-12.log": {
+      "checksum": "d80c66ef1909cf92808b136d9cbcc7db"
+    },
+    "logs/money-monitor-2026-10-13.log": {
+      "checksum": "a6da8114ad13469c1a607768cf38977e"
+    },
     "R/aggiorna_db.R": {
-      "checksum": "5a54cbf4dd43e44551da8c607d9e3314"
+      "checksum": "c3f4ccbca5de57b2351aaa74029b575d"
     },
     "R/budget_giornaliero.R": {
-      "checksum": "27dc495c15b98f0ae6624a017198cdf6"
+      "checksum": "7d5813978b1647e0c534b5ad66adb6fd"
     },
     "R/budget_mensile.R": {
       "checksum": "c984d7ab6275adbdcd38a1a84dcb40b5"
+    },
+    "R/calcola_budgets.R": {
+      "checksum": "4eb029116f4fab3ce88f4f3e0069b791"
     },
     "R/db_connect.R": {
       "checksum": "8dc3980d0e2da6afba3fe2a1d77b52c8"
@@ -4553,28 +4684,55 @@
       "checksum": "fd0794efd95640008bc1b708b58173d1"
     },
     "R/guadagni_mese.R": {
-      "checksum": "cf8b2e9eff7c5d681b2f80b7e75b60de"
+      "checksum": "f8a4fe42b76fc2d7954f7ae54564ab94"
     },
     "R/otp_polling.R": {
       "checksum": "ffa38e779ff339b6d7009e55af3be8f3"
     },
     "R/scarica_excel.R": {
-      "checksum": "22649ee0415d99bb07bad681c6d39756"
+      "checksum": "0a4e938a67bec0be87caac5d58bdec61"
+    },
+    "R/scarica_excel_httr2.R": {
+      "checksum": "f8d7fe534e59b110142dcb799e7185d9"
     },
     "README.md": {
       "checksum": "d370f173f73371ee9b468da4cfc151ed"
     },
     "renv.lock": {
-      "checksum": "f3167c8f03bb0a3f082e0f0ce24cef5f"
+      "checksum": "d80fb475c27cbbfede9be31aa6fd2fbe"
+    },
+    "requirements.txt": {
+      "checksum": "1f5abc985e3dff25a3a01adf9a1b7a76"
+    },
+    "run.bat": {
+      "checksum": "b3915446564cb92e6a4c29c92df649bf"
     },
     "run.R": {
-      "checksum": "c194e553c15455032d430fdd6974e183"
+      "checksum": "221ded979285abbd0bb16bbbf24762af"
+    },
+    "run_silent.vbs": {
+      "checksum": "c1b753d774d7787d86be95e5ae9c997e"
+    },
+    "scarica_excel.py": {
+      "checksum": "b01ee9c6d72440ea9e04364851df8a22"
+    },
+    "sql/add_budget_id.sql": {
+      "checksum": "8907a8b48c3fc41f106305997e5245fd"
+    },
+    "sql/add_last_run.sql": {
+      "checksum": "517bf80aaae7527bb7c84c841e2d4ae9"
+    },
+    "sql/budgets_setup.sql": {
+      "checksum": "3f62650225025f470f858f5db7908774"
     },
     "sql/otp_relay_setup.sql": {
       "checksum": "533ae1e4700162842beff5a377c4de56"
     },
     "sql/scheduler_setup.sql": {
       "checksum": "3ebb43903678544d14d4ddbb0d670a12"
+    },
+    "www.bbva.it.har": {
+      "checksum": "34d67404074570ccfd998c2c341e296c"
     }
   },
   "users": null
