@@ -17,9 +17,11 @@ budget_giornaliero <- function(con) {
   da <- periodo$da
   a <- periodo$a
 
-  guadagni <- guadagni_del_mese(con)
+  guadagni <- guadagni_del_mese(con, solo_stipendio = FALSE)
+  stipendio <- guadagni_del_mese(con)
   budgets_df <- tbl(con, "budgets") |> filter(attivo) |> collect()
-  calc <- calcola_budgets(guadagni, budgets_df)
+
+  calc <- calcola_budgets(guadagni, stipendio, budgets_df)
   budget <- if (nrow(calc) == 0) guadagni else last(calc$residuo_dopo)
 
   giorni_periodo <- as.integer(a - da) # giorni del mese corrente

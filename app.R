@@ -239,7 +239,7 @@ server <- function(input, output, session) {
 
   guadagni_rv <- reactive({
     refresh()
-    guadagni_info(con)
+    guadagni_info(con, solo_stipendio = FALSE)
   })
 
   output$guadagni_label <- renderText({
@@ -264,7 +264,8 @@ server <- function(input, output, session) {
 
   output$budget_spendibile <- renderText({
     guadagni <- guadagni_rv()$valore
-    calc <- calcola_budgets(guadagni, budgets_data())
+    stipendio <- guadagni_del_mese(con)
+    calc <- calcola_budgets(guadagni, stipendio, budgets_data())
     spendibile <- if (nrow(calc) == 0) guadagni else last(calc$residuo_dopo)
     fmt_eur(spendibile)
   })
@@ -288,7 +289,8 @@ server <- function(input, output, session) {
     da_str <- format(periodo$da, "%Y-%m-%d")
 
     guadagni <- guadagni_rv()$valore
-    calc <- calcola_budgets(guadagni, budgets_data())
+    stipendio <- guadagni_del_mese(con)
+    calc <- calcola_budgets(guadagni, stipendio, budgets_data())
 
     # Spese assegnate a ciascun budget dal giorno dello stipendio
     spese_per_budget <- dbGetQuery(

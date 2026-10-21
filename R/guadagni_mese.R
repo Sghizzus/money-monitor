@@ -58,7 +58,11 @@ media_ultimi_3_mesi <- function(con, includi_ignorati = FALSE) {
 #'   }
 #' @seealso [guadagni_del_mese()], [media_ultimi_3_mesi()]
 
-guadagni_info <- function(con, includi_ignorati = FALSE) {
+guadagni_info <- function(
+  con,
+  includi_ignorati = FALSE,
+  solo_stipendio = TRUE
+) {
   periodo <- periodo_attuale(con)
   da <- periodo$da
   a <- periodo$a
@@ -69,9 +73,17 @@ guadagni_info <- function(con, includi_ignorati = FALSE) {
       data_valuta >= !!da,
       data_valuta < !!a,
       includi_ignorati | !ignora
-    ) |>
-    summarise(tot = max(importo, na.rm = TRUE)) |>
-    pull(tot)
+    )
+
+  if (solo_stipendio) {
+    tot <- tot |>
+      summarise(tot = max(importo, na.rm = TRUE)) |>
+      pull(tot)
+  } else {
+    tot <- tot |>
+      summarise(tot = sum(importo, na.rm = TRUE)) |>
+      pull(tot)
+  }
 
   stimato <- is.na(tot) || tot == 0
 
@@ -93,6 +105,10 @@ guadagni_info <- function(con, includi_ignorati = FALSE) {
 #' @return Valore numerico: guadagni del mese (reali o stimati).
 #' @seealso [guadagni_info()], [periodo_attuale()]
 
-guadagni_del_mese <- function(con, includi_ignorati = FALSE) {
-  guadagni_info(con, includi_ignorati)$valore
+guadagni_del_mese <- function(
+  con,
+  includi_ignorati = FALSE,
+  solo_stipendio = TRUE
+) {
+  guadagni_info(con, includi_ignorati, solo_stipendio)$valore
 }

@@ -18,30 +18,36 @@
 #'     \item{residuo_dopo}{Residuo spendibile dopo aver detratto questo budget}
 #'   }
 
-calcola_budgets <- function(guadagni, budgets_df) {
+calcola_budgets <- function(guadagni, stipendio, budgets_df) {
   df <- arrange(budgets_df, ordine)
 
   if (nrow(df) == 0 || is.na(guadagni) || guadagni <= 0) {
-    return(mutate(df, importo_calcolato = 0, residuo_dopo = coalesce(guadagni, 0)))
+    return(mutate(
+      df,
+      importo_calcolato = 0,
+      residuo_dopo = coalesce(guadagni, 0)
+    ))
   }
 
-  residuo  <- guadagni
-  importi  <- numeric(nrow(df))
+  residuo <- stipendio
+  importi <- numeric(nrow(df))
 
   for (i in seq_len(nrow(df))) {
-    imp <- switch(df$tipo[i],
-      "fisso"         = df$valore[i],
-      "perc_guadagni" = guadagni * df$valore[i] / 100,
-      "perc_residuo"  = residuo  * df$valore[i] / 100,
+    imp <- switch(
+      df$tipo[i],
+      "fisso" = df$valore[i],
+      "perc_guadagni" = stipendio * df$valore[i] / 100,
+      "perc_residuo" = residuo * df$valore[i] / 100,
       0
     )
-    imp       <- max(0, min(imp, residuo))
+    imp <- max(0, min(imp, residuo))
     importi[i] <- imp
-    residuo   <- residuo - imp
+    residuo <- residuo - imp
   }
 
-  mutate(df,
+  mutate(
+    df,
     importo_calcolato = importi,
-    residuo_dopo      = guadagni - cumsum(importi)
+    residuo_dopo = guadagni - cumsum(importi)
   )
 }
