@@ -58,7 +58,7 @@ budget_giornaliero <- function(con) {
 
   # Ricalibra il budget residuo giorno per giorno
   for (i in seq_along(giorno)) {
-    b[(i + 1):giorni_periodo] <- pmin(
+    b[(i + 1):giorni_periodo] <- pmax(
       weights[(i + 1):giorni_periodo] *
         (budget - sum(x[1:i])) /
         (giorni_periodo + 1 - i),
