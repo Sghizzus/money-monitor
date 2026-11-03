@@ -45,7 +45,7 @@ budget_giornaliero <- function(con) {
   if (nrow(spese) > 0) {
     spese <- complete(
       spese,
-      giorno = seq_len(max(giorno)),
+      giorno = seq_len(giorni_periodo),
       fill = list(importo = 0)
     )
   }
